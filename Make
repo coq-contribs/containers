@@ -1,11 +1,34 @@
--I src
+-R src Containers.Plugin
 -R theories Containers
--custom "$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o src/containers_plugin.cmxs src/printing.cmx src/generate.cmx src/containers_plugin_mod.cmx" "src/printing.cmx src/generate.cmx src/containers_plugin_mod.cmx" src/containers_plugin.cmxs
--custom "$(CAMLLINK) -g -a -o src/containers_plugin.cma src/printing.cmo src/generate.cmo src/containers_plugin_mod.cmo" "src/printing.cmo src/generate.cmo src/containers_plugin_mod.cmo" src/containers_plugin.cma
--custom "$(COQBIN)coqc $(COQDEBUG) $(COQFLAGS) $*" "%.v $(CONTAINERS_PLUGINOPT) $(CONTAINERS_PLUGIN)" "%.vo %.glob"
+-custom "$(CAMLLINK) -g -a -o $@ $^" "$(CMOFILES)" $(CONTAINERS_PLUGIN)
+-custom "$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $^" "$(CMXFILES)" $(CONTAINERS_PLUGINOPT)
+-custom "
+#the following is inserted verbatim
+
+theories/Generate.vo: $(CONTAINERS_PLUGINOPT) $(CONTAINERS_PLUGIN)
+
+install-plugin:
+	install -d $(COQLIB)/user-contrib/Containers/Plugin/
+	install -t $(COQLIB)/user-contrib/Containers/Plugin/ $(CONTAINERS_PLUGIN) $(CONTAINERS_PLUGINOPT)
+
+install: install-plugin
+
+test: $(TESTVOFILES) 
+
+$(TESTVOFILES): $(VOFILES)
+
+clean-test: 
+	-rm -f  $(TESTVOFILES) $(TESTVFILES:.v=.glob) $(TESTVFILES:.v=.v.d) 
+
+clean: clean-test
+
+#end verbatim
+" "" ""
+
 CONTAINERS_PLUGIN = "src/containers_plugin.cma"
 CONTAINERS_PLUGINOPT = "src/containers_plugin.cmxs"
 COQDOC = "$(COQBIN)coqdoc -interpolate -utf8"
+OCAMLLIBS = "-I src"
 CAMLP4OPTIONS = "-loc loc"
 src/printing.ml
 src/generate.ml
@@ -38,6 +61,5 @@ theories/CMapPositiveInstance.v
 theories/Maps.v
 theories/Generate.v
 theories/SetConstructs.v
-tests/BenchMarks.v
-tests/TestSet.v
-tests/TestMap.v
+TESTVFILES = "tests/BenchMarks.v tests/TestSet.v tests/TestMap.v"
+TESTVOFILES = "$(TESTVFILES:.v=.vo)"
