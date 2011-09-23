@@ -32,15 +32,16 @@ Installation
 First, you should have coqc, ocamlc and make in your path.
 Then simply do:
 
-# coq_makefile -f make > Makefile
+# make -j
 
-To generate a makefile from the description in Make, then [make].
-This will consecutively build the plugin, the supporting
-theories and the test file.
+To consecutively build the plugin and the supporting theories.
+Optionally you can launch the tests and benchmarks with
+
+# make test
 
 You can then either install the plugin with
 
-# sudo ./install.sh
+# sudo make install
 
 or leave it in its current directory and to be able to import it
 from anywhere in Coq, simply add the following to ~/.coqrc:
