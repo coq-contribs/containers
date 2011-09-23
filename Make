@@ -1,0 +1,43 @@
+-I src
+-R theories Containers
+-custom "$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o src/containers_plugin.cmxs src/printing.cmx src/generate.cmx src/containers_plugin_mod.cmx" "src/printing.cmx src/generate.cmx src/containers_plugin_mod.cmx" src/containers_plugin.cmxs
+-custom "$(CAMLLINK) -g -a -o src/containers_plugin.cma src/printing.cmo src/generate.cmo src/containers_plugin_mod.cmo" "src/printing.cmo src/generate.cmo src/containers_plugin_mod.cmo" src/containers_plugin.cma
+-custom "$(COQBIN)coqc $(COQDEBUG) $(COQFLAGS) $*" "%.v $(CONTAINERS_PLUGINOPT) $(CONTAINERS_PLUGIN)" "%.vo %.glob"
+CONTAINERS_PLUGIN = "src/containers_plugin.cma"
+CONTAINERS_PLUGINOPT = "src/containers_plugin.cmxs"
+COQDOC = "$(COQBIN)coqdoc -interpolate -utf8"
+CAMLP4OPTIONS = "-loc loc"
+src/printing.ml
+src/generate.ml
+src/containers_plugin_mod.ml
+theories/OrderedType.v
+theories/Tactics.v
+theories/OrderedTypeEx.v
+theories/Bridge.v
+theories/SetInterface.v
+theories/SetFacts.v
+theories/SetDecide.v
+theories/SetProperties.v
+theories/SetEqProperties.v
+theories/SetList.v
+theories/SetListInstance.v
+theories/SetAVL.v
+theories/SetAVLInstance.v
+theories/Sets.v
+theories/MapInterface.v
+theories/MapNotations.v
+theories/MapFacts.v
+theories/MapList.v
+theories/MapListInstance.v
+theories/MapAVL.v
+theories/MapAVLInstance.v
+theories/MapPositive.v
+theories/MapPositiveInstance.v
+theories/CMapPositive.v
+theories/CMapPositiveInstance.v
+theories/Maps.v
+theories/Generate.v
+theories/SetConstructs.v
+tests/BenchMarks.v
+tests/TestSet.v
+tests/TestMap.v
