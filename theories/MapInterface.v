@@ -302,7 +302,6 @@ Class FMapSpecs_SpecificOrderedType `(F : FMap key) := {
   FMap_SpecificOrderedType :> forall `{OrderedType elt},
     SpecificOrderedType _ (Equal_kw (elt:=elt)
       (fun k v m => exists v', v === v' /\ MapsTo k v' m))
-    (Equal_kw_Equivalence _)
 }.
 
 (* Aliases for hints. See SetInterface for the reason why we do that. *)

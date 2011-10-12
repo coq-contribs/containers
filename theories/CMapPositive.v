@@ -161,10 +161,10 @@ Qed.
 Module CPositiveMap.
   Module E.
     Definition eq (x y : positive) := @_eq positive
-      (@SOT_as_OT positive _ _
+      (@SOT_as_OT positive _
         PositiveOrderedTypeBitsInstance.positive_rev_OrderedType) x y.
     Definition lt (x y : positive) := @_lt positive
-      (@SOT_as_OT positive _ _
+      (@SOT_as_OT positive _
         PositiveOrderedTypeBitsInstance.positive_rev_OrderedType) x y.
   End E.
   Hint Unfold E.eq E.lt.
@@ -544,7 +544,7 @@ Module CPositiveMap.
           E.eq (fst p) (fst p') /\ (snd p) = (snd p').
 
   Definition lt_key (p p':positive*A) :=
-    @ME.ltk positive (@SOT_as_OT _ _ _
+    @ME.ltk positive (@SOT_as_OT _ _
       PositiveOrderedTypeBitsInstance.positive_rev_OrderedType) _ p p'.
 
   Lemma mem_find :
@@ -629,7 +629,7 @@ Module CPositiveMap.
   Lemma insert_1 : forall m x y e d f, E.eq x y -> MapsTo y e m ->
     MapsTo y (f e) (insert x d f m).
   Proof.
-    unfold MapsTo, insert; intros m x y e d f H; rewrite H; clear H.
+    unfold MapsTo, insert; intros m x y e d f H; rewrite !H; clear H.
     intro H; rewrite H; apply find_1; apply add_1; reflexivity.
   Qed.
 
@@ -637,7 +637,7 @@ Module CPositiveMap.
     MapsTo y d (insert x d f m).
   Proof.
     unfold MapsTo, insert.
-    intros m x y d f H abs; rewrite H; auto.
+    intros m x y d f H abs; rewrite !H; auto.
     case_eq (find y m); auto; intros.
     contradiction abs; exists a; auto.
     apply find_1; apply add_1; reflexivity.
@@ -661,7 +661,7 @@ Module CPositiveMap.
   Lemma adjust_1 : forall m x y e f, E.eq x y -> MapsTo y e m ->
     MapsTo y (f e) (adjust x f m).
   Proof.
-    unfold MapsTo, adjust; intros m x y e f H; rewrite H; clear H.
+    unfold MapsTo, adjust; intros m x y e f H; rewrite !H; clear H.
     intro H; rewrite H; apply find_1; apply add_1; reflexivity.
   Qed.
 
@@ -1306,14 +1306,18 @@ Module CPositiveMap.
         destruct (option_cmp cmp o o0); destruct (equal_aux cmp T1 T'1); auto.
         destruct (option_cmp cmp o o0); discriminate H||exact H.
         eexists; eauto.
+(*
       refine ((fun H => conj (fun k => proj1 (H k)) (fun k => proj2 (H k))) _).
-      intro k; assert (H' := H0 k); clear H0.
+       Anomaly: Uncaught exception Invalid_argument("list_filter2"). Please report.
+*)
+      split; intro k; assert (H' := H0 k); clear H0.
       destruct (find_aux k T).
         destruct H' as [e' [He'1 He'2]].
         rewrite He'1; clear He'1.
         intuition; (eexists; eauto)||idtac.
-        revert He'2; inversion H0; inversion H1; easy.
-      rewrite H'; intuition; discriminate H0.
+        rewrite H'. firstorder.
+      intros e e' Hk Hk'. rewrite Hk in H'.
+       destruct H' as [e'' [He'1 He'2]]. congruence.
     (**)
     discriminate H.
     discriminate H.

@@ -828,12 +828,12 @@ Module SetAVL.
     Ltac join_tac :=
       intro l; induction l as [| ll _ lx lr Hlr lh];
         [ | intros x r; induction r as [| rl Hrl rx rr _ rh]; unfold join;
-          [ | destruct (Z_gt_le_dec lh (rh+2));
+          [ | destruct (Z_gt_le_dec lh (rh+2)) as [z|z];
             [ match goal with |- context b [ bal ?a ?b ?c] =>
                 replace (bal a b c)
                 with (bal ll lx (join lr x (Node rl rx rr rh))); [ | auto]
               end
-              | destruct (Z_gt_le_dec rh (lh+2));
+              | destruct (Z_gt_le_dec rh (lh+2)) as [z0|z0];
                 [ match goal with |- context b [ bal ?a ?b ?c] =>
                     replace (bal a b c)
                     with (bal (join (Node ll lx lr lh) x rl) rx rr); [ | auto]
@@ -2178,7 +2178,8 @@ Definition set_compare `{OrderedType A} : set A -> set A -> comparison :=
   S.compare.
 
 Program Instance set_OrderedType `{OrderedType A} :
-  SpecificOrderedType (set A) (@Equal A _) Equal_Equivalence := {
+  SpecificOrderedType (set A) (@Equal A _) := {
+    SOT_Equivalence := Equal_Equivalence;
     SOT_lt := S.lt;
     SOT_StrictOrder := Build_StrictOrder _ _ _ _ _ _;
     SOT_cmp := set_compare

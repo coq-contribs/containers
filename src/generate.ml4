@@ -42,7 +42,7 @@ let print_ind_body fmt ibody =
 
 let dl id = Util.dummy_loc, id
 let cf cexpr = false, cexpr
-let cprop = CSort (Util.dummy_loc, Rawterm.RProp Term.Null)
+let cprop = CSort (Util.dummy_loc, Glob_term.GProp Term.Null)
 let ccomparison = mkIdentC (Names.id_of_string "comparison")
 let bin_rel_t id_t =
   CArrow (Util.dummy_loc, mkIdentC id_t,
@@ -59,7 +59,7 @@ let declare_definition
     binder_list red_expr_opt constr_expr
     constr_expr_opt decl_hook =
   let (def_entry, man_impl) =
-    Command.interp_definition boxed_flag binder_list red_expr_opt constr_expr
+    Command.interp_definition binder_list red_expr_opt constr_expr
       constr_expr_opt
   in
     Command.declare_definition
@@ -86,7 +86,7 @@ let rec prod_n_i acc n =
     | n ->
 	let xn = Names.Name (Nameops.make_ident "x" (Some n)) in
 	let yn = Names.Name (Nameops.make_ident "y" (Some n)) in
-	  prod_n_i (([dl xn; dl yn], Default Rawterm.Explicit, hole)::acc)
+	  prod_n_i (([dl xn; dl yn], Default Glob_term.Explicit, hole)::acc)
 	    (n-1)
 
 let eq_constr_i eqid cid carity =
@@ -176,7 +176,7 @@ let inter_constr ltid cid carity otherids otherarities =
     let rec prod acc v = function
       | 0 -> acc
       | n -> let xn = Names.Name (Nameops.make_ident v (Some n)) in
-	  prod (([dl xn], Default Rawterm.Explicit, hole)::acc) v (n-1)
+	  prod (([dl xn], Default Glob_term.Explicit, hole)::acc) v (n-1)
     in
     let foralls1 = prod [] "y" ar in
     let foralls = prod foralls1 "x" carity in
@@ -302,7 +302,7 @@ let make_cmp_def ind mind body =
   let def =
     CLambdaN (Util.dummy_loc,
 	      [([dl (Names.Name x); dl (Names.Name y)],
-		Default Rawterm.Explicit,
+		Default Glob_term.Explicit,
 		mkIdentC id_t)],
 	      body) in
     id_cmp, def
@@ -613,11 +613,13 @@ let generate_simple_ot gref =
 
 open Declarations
 
+let print_ind (mind,index) =
+  Printf.sprintf "(%s, %d)" (Names.string_of_mind mind) index
+
 let print_recarg = function
   | Norec -> qs "Norec"
-  | Mrec n -> qs (Printf.sprintf "Mrec %d" n)
-  | Imbr (mind, index) ->
-      qs (Printf.sprintf "Inductive (%s, %d)" (Names.string_of_mind mind) index)
+  | Mrec ind -> qs (Printf.sprintf "Mrec %s" (print_ind ind))
+  | Imbr ind -> qs (Printf.sprintf "Inductive %s" (print_ind ind))
 
 let rec map3 f l1 l2 l3 =
   match l1, l2, l3 with
@@ -803,7 +805,7 @@ let rmake_cmp_def ind mask mind body =
   let body =  CCases (Util.dummy_loc, RegularStyle, None, items, branches) in
     (dl id_cmp, (None, Topconstr.CStructRec),
      [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
-		    Default Rawterm.Explicit, mkIdentC id_t)],
+		    Default Glob_term.Explicit, mkIdentC id_t)],
      ccomparison,
      Some body)
 
@@ -841,7 +843,7 @@ let generate_rec_ot gref =
   Command.do_mutual_inductive mutual_lt true;
   (* declare the comparison function *)
   let fexpr = rmake_cmp_def ind mask mind ibody in
-  Command.do_fixpoint [(fexpr, [])] true;
+  Command.do_fixpoint [(fexpr, [])];
   (* prove the Equivalence instance *)
   prove_Equivalence indconstr mind ibody;
   (* prove the StrictOrder instance *)
@@ -928,7 +930,7 @@ let mprove_refl k ids ids_eq mind =
   let goal i =
     CProdN (Util.dummy_loc,
 	    [[dl (Names.Name x)],
-	     Default Rawterm.Explicit,
+	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
 	    mkAppC (ceq i, [mkIdentC x; mkIdentC x])) in
   let goals =
@@ -956,7 +958,7 @@ let mprove_sym k ids ids_eq mind =
   let goal i =
     CProdN (Util.dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Rawterm.Explicit,
+	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
 	    CArrow (Util.dummy_loc,
 		    mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
@@ -987,7 +989,7 @@ let mprove_trans k ids ids_eq mind =
   let goal i =
     CProdN (Util.dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	     Default Rawterm.Explicit,
+	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
 	    CArrow (Util.dummy_loc,
 		    mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
@@ -1121,7 +1123,7 @@ let seq_eapply lids : raw_tactic_expr =
     TacAtom (Util.dummy_loc,
 	     TacApply (true, false,
 		       [(mkIdentC id,
-			 Rawterm.ImplicitBindings [mkIdentC b])],
+			 Glob_term.ImplicitBindings [mkIdentC b])],
 		       None))
   in
     TacFun ([Some b], TacFirst (List.map apply lids))
@@ -1133,12 +1135,12 @@ let seq_eapply_sym lids lsyms : raw_tactic_expr =
       TacAtom (Util.dummy_loc,
 	       TacApply (true, false,
 			 [(mkIdentC id,
-			   Rawterm.ImplicitBindings [mkIdentC b])],
+			   Glob_term.ImplicitBindings [mkIdentC b])],
 			 None)),
       [
 	TacAtom (Util.dummy_loc,
 		 TacApply (true, false,
-			   [(mkIdentC idsym, Rawterm.NoBindings)],
+			   [(mkIdentC idsym, Glob_term.NoBindings)],
 			   None));
 	TacId []
       ])
@@ -1156,8 +1158,8 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     let lems =
       Array.fold_left
 	(fun acc id_eq ->
-	   (mkIdentC (add_suffix id_eq "_sym"))::
-	     (mkIdentC (add_suffix id_eq "_trans"))::acc
+	   ((),mkIdentC (add_suffix id_eq "_sym"))::
+	     ((),mkIdentC (add_suffix id_eq "_trans"))::acc
 	) [] ids_eq in
       TacAtom (Util.dummy_loc,
 	       TacExtend (Util.dummy_loc, "eauto",
@@ -1170,7 +1172,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     let lemma_eq_lt i =
       CProdN (Util.dummy_loc,
 	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	       Default Rawterm.Explicit,
+	       Default Glob_term.Explicit,
 	       mkIdentC ids.(i)],
 	      CArrow (Util.dummy_loc,
 		      mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
@@ -1180,7 +1182,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     let lemma_eq_gt i =
       CProdN (Util.dummy_loc,
 	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	       Default Rawterm.Explicit,
+	       Default Glob_term.Explicit,
 	       mkIdentC ids.(i)],
 	      CArrow (Util.dummy_loc,
 		      mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
@@ -1220,7 +1222,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   let goal i =
     CProdN (Util.dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	     Default Rawterm.Explicit,
+	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
 	    CArrow (Util.dummy_loc,
 		    mkAppC (clt i, [mkIdentC x; mkIdentC y]),
@@ -1268,7 +1270,7 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
   let goal i =
     CProdN (Util.dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Rawterm.Explicit,
+	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
 	    CArrow (Util.dummy_loc,
 		    mkAppC (clt i, [mkIdentC x; mkIdentC y]),
@@ -1387,7 +1389,7 @@ let mmake_cmp_def k ind masks mind =
   let make_block i body =
     (dl ids_cmp.(i), (None, Topconstr.CStructRec),
      [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
-		    Default Rawterm.Explicit, mkIdentC ids.(i))],
+		    Default Glob_term.Explicit, mkIdentC ids.(i))],
      ccomparison,
      Some (make_body i body))
   in
@@ -1396,7 +1398,7 @@ let mmake_cmp_def k ind masks mind =
 	let def =
 	  CLambdaN (Util.dummy_loc,
 		    [([dl (Names.Name x); dl (Names.Name y)],
-		      Default Rawterm.Explicit,
+		      Default Glob_term.Explicit,
 		      mkIdentC ids.(0))],
 		    make_body 0 mind.mind_packets.(0))
 	in
@@ -1409,7 +1411,7 @@ let mmake_cmp_def k ind masks mind =
 			   (fun i body -> make_block i body, [])
 			   mind.mind_packets)
 	in
-	Command.do_fixpoint defs true
+	Command.do_fixpoint defs
 
 (* proving the [OrderedType] instance *)
 let mprove_compare_spec k ids mind =
@@ -1426,7 +1428,7 @@ let mprove_compare_spec k ids mind =
   let goal i =
     CProdN (Util.dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Rawterm.Explicit,
+	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
 	    mkAppC (ccomp_spec,
 		    [ ceq i; clt i;
@@ -1542,7 +1544,7 @@ let generate_scheme gref =
 		   Vernacexpr.InductionScheme(true, (* dependent *)
 					      Genarg.AN
 						(Libnames.Ident (dl id)),
-					      Rawterm.RProp Term.Null))
+					      Glob_term.GProp Term.Null))
 	     ) names
   in
   Indschemes.do_scheme schemes

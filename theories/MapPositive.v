@@ -71,9 +71,9 @@ Qed.
 Module PositiveMap.
   Module E.
     Definition eq (x y : positive) := @_eq positive
-      (@SOT_as_OT positive _ _ positive_l2r_OrderedType) x y.
+      (@SOT_as_OT positive _ positive_l2r_OrderedType) x y.
     Definition lt (x y : positive) := @_lt positive
-      (@SOT_as_OT positive _ _ positive_l2r_OrderedType) x y.
+      (@SOT_as_OT positive _ positive_l2r_OrderedType) x y.
   End E.
   Hint Unfold E.eq E.lt.
   Module ME := KeyOrderedType.
@@ -584,7 +584,7 @@ Module PositiveMap.
     E.eq (fst p) (fst p') /\ (snd p) = (snd p').
 
   Definition lt_key (p p':positive*A) :=
-    @ME.ltk positive (@SOT_as_OT _ _ _ positive_l2r_OrderedType) _ p p'.
+    @ME.ltk positive (@SOT_as_OT _ _ positive_l2r_OrderedType) _ p p'.
 
   Lemma mem_find :
     forall m x, mem x m = match find x m with None => false | _ => true end.

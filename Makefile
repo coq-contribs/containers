@@ -48,6 +48,7 @@ COQSRCLIBS?=-I $(COQLIB)kernel -I $(COQLIB)lib \
   -I $(COQLIB)plugins/firstorder \
   -I $(COQLIB)plugins/fourier \
   -I $(COQLIB)plugins/funind \
+  -I $(COQLIB)plugins/interface \
   -I $(COQLIB)plugins/micromega \
   -I $(COQLIB)plugins/nsatz \
   -I $(COQLIB)plugins/omega \
@@ -136,21 +137,30 @@ VIFILES:=$(VFILES:.v=.vi)
 GFILES:=$(VFILES:.v=.g)
 HTMLFILES:=$(VFILES:.v=.html)
 GHTMLFILES:=$(VFILES:.v=.g.html)
+ML4FILES:=src/generate.ml4
 MLFILES:=src/containers_plugin_mod.ml\
-  src/generate.ml\
   src/printing.ml
-CMOFILES:=$(MLFILES:.ml=.cmo)
+CMOFILES:=$(ML4FILES:.ml4=.cmo) $(MLFILES:.ml=.cmo)
 CMOFILES2=$(patsubst src/%,%,$(filter src/%,$(CMOFILES)))
 CMXFILES:=$(CMOFILES:.cmo=.cmx)
 OFILES:=$(CMXFILES:.cmx=.o)
-CMIFILES:=$(CMOFILES:.cmo=.cmi)
+MLLIBFILES:=src/containers_plugin.mllib
+CMAFILES:=$(MLLIBFILES:.mllib=.cma)
+CMXAFILES:=$(CMAFILES:.cma=.cmxa)
+MLIFILES:=src/printing.mli
+CMIFILES:=$(sort $(CMOFILES:.cmo=.cmi) $(MLIFILES:.mli=.cmi))
 CMIFILES2=$(patsubst src/%,%,$(filter src/%,$(CMIFILES)))
-CMXSFILES:=$(CMXFILES:.cmx=.cmxs)
+CMXSFILES:=$(CMXFILES:.cmx=.cmxs) $(CMXAFILES:.cmxa=.cmxs)
 CMXSFILES2=$(patsubst src/%,%,$(filter src/%,$(CMXSFILES)))
 
-all: $(VOFILES) $(CMOFILES) $(if ifeq '$(HASNATDYNLINK)' 'true',$(CMXSFILES)) \
-  $(CONTAINERS_PLUGINOPT)\
-  $(CONTAINERS_PLUGIN)
+all: $(VOFILES) $(CMOFILES) $(CMAFILES) $(if ifeq '$(HASNATDYNLINK)' 'true',$(CMXSFILES)) 
+
+mlihtml: $(MLIFILES:.mli=.cmi)
+	 mkdir $@ || rm -rf $@/*
+	$(OCAMLDOC) -html -rectypes -d $@ -m A $(ZDEBUG) $(ZFLAGS) $(^:.cmi=.mli)
+
+all-mli.tex: $(MLIFILES:.mli=.cmi)
+	$(OCAMLDOC) -latex -rectypes -o $@ -m A $(ZDEBUG) $(ZFLAGS) $(^:.cmi=.mli)
 
 spec: $(VIFILES)
 
@@ -187,8 +197,6 @@ all-gal.pdf: $(VFILES)
 	
 #the following is inserted verbatim
 
-theories/Generate.vo: $(CONTAINERS_PLUGINOPT) $(CONTAINERS_PLUGIN)
-
 install-plugin:
 	install -d $(COQLIB)/user-contrib/Containers/Plugin/
 	install -t $(COQLIB)/user-contrib/Containers/Plugin/ $(CONTAINERS_PLUGIN) $(CONTAINERS_PLUGINOPT)
@@ -207,12 +215,6 @@ clean: clean-test
 #end verbatim
 
 
-$(CONTAINERS_PLUGINOPT): $(CMXFILES)
-	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $^
-
-$(CONTAINERS_PLUGIN): $(CMOFILES)
-	$(CAMLLINK) -g -a -o $@ $^
-
 ####################
 #                  #
 # Special targets. #
@@ -220,6 +222,21 @@ $(CONTAINERS_PLUGIN): $(CMOFILES)
 ####################
 
 .PHONY: NOARG all opt byte archclean clean install depend html
+
+%.cmi: %.mli
+	$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<
+
+%.mli.d: %.mli
+	$(OCAMLDEP) -slash $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+
+%.cmo: %.ml4
+	$(CAMLC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<
+
+%.cmx: %.ml4
+	$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<
+
+%.ml4.d: %.ml4
+	$(OCAMLDEP) -slash $(OCAMLLIBS) $(PP) -impl "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 %.cmo: %.ml
 	$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<
@@ -232,6 +249,18 @@ $(CONTAINERS_PLUGIN): $(CMOFILES)
 
 %.cmxs: %.cmx
 	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $<
+
+%.cma: | %.mllib
+	$(CAMLLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^
+
+%.cmxa: | %.mllib
+	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^
+
+%.cmxs: %.cmxa
+	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -linkall -shared -o $@ $<
+
+%.mllib.d: %.mllib
+	$(COQDEP) -slash $(COQLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 %.vo %.glob: %.v
 	$(COQC) $(COQDEBUG) $(COQFLAGS) $*
@@ -282,10 +311,18 @@ install:$(if ifeq '$(HASNATDYNLINK)' 'true',install-natdynlink)
 	 install -d `dirname $(DSTROOT)$(COQLIB)user-contrib/Containers/Plugin/$$i`; \
 	 install $$i $(DSTROOT)$(COQLIB)user-contrib/Containers/Plugin/$$i; \
 	done
+	cd src; for i in $(CMAFILES2); do \
+	 install -d `dirname $(DSTROOT)$(COQLIB)user-contrib/Containers/Plugin/$$i`; \
+	 install $$i $(DSTROOT)$(COQLIB)user-contrib/Containers/Plugin/$$i; \
+	done
 
 install-doc:
 	install -d $(DSTROOT)$(DOCDIR)user-contrib/Containers/html
 	for i in html/*; do \
+	 install $$i $(DSTROOT)$(DOCDIR)user-contrib/Containers/$$i;\
+	done
+	install -d $(DSTROOT)$(DOCDIR)user-contrib/Containers/mlihtml
+	for i in mlihtml/*; do \
 	 install $$i $(DSTROOT)$(DOCDIR)user-contrib/Containers/$$i;\
 	done
 
@@ -297,8 +334,6 @@ clean:
 	rm -f all.ps all-gal.ps all.pdf all-gal.pdf all.glob $(VFILES:.v=.glob) $(VFILES:.v=.tex) $(VFILES:.v=.g.tex) all-mli.tex
 	- rm -rf html mlihtml
 	- rm -rf 
-	- rm -rf $(CONTAINERS_PLUGINOPT)
-	- rm -rf $(CONTAINERS_PLUGIN)
 
 archclean:
 	rm -f *.cmx *.o
@@ -321,6 +356,15 @@ Makefile: Make
 
 -include $(MLFILES:.ml=.ml.d)
 .SECONDARY: $(MLFILES:.ml=.ml.d)
+
+-include $(MLIFILES:.mli=.mli.d)
+.SECONDARY: $(MLIFILES:.mli=.mli.d)
+
+-include $(ML4FILES:.ml4=.ml4.d)
+.SECONDARY: $(ML4FILES:.ml4=.ml4.d)
+
+-include $(MLLIBFILES:.mllib=.mllib.d)
+.SECONDARY: $(MLLIBFILES:.mllib=.mllib.d)
 
 # WARNING
 #

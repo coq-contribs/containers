@@ -589,12 +589,12 @@ Module MapAVL.
     Ltac join_tac :=
       intros l; induction l as [| ll _ lx ld lr Hlr lh];
    [ | intros x d r; induction r as [| rl Hrl rx rd rr _ rh]; unfold join;
-     [ | destruct (Z_gt_le_dec lh (rh+2));
+     [ | destruct (Z_gt_le_dec lh (rh+2)) as [z|z];
        [ match goal with |- context [ bal ?u ?v ?w ?z ] =>
            replace (bal u v w z)
            with (bal ll lx ld (join lr x d (Node rl rx rd rr rh))); [ | auto]
          end
-       | destruct (Z_gt_le_dec rh (lh+2));
+       | destruct (Z_gt_le_dec rh (lh+2)) as [z0|z0];
          [ match goal with |- context [ bal ?u ?v ?w ?z ] =>
              replace (bal u v w z)
              with (bal (join (Node ll lx ld lr lh) x d rl) rx rd rr); [ | auto]
@@ -2578,8 +2578,8 @@ Section EncapsulationOrd.
 
   Program Instance map_SpecificOrderedType
     : SpecificOrderedType t (MapInterface.Equal_kw (elt:=elt)
-      (fun k v m => exists v', v === v' /\ MapsTo k v' m))
-    (MapInterface.Equal_kw_Equivalence _) := {
+      (fun k v m => exists v', v === v' /\ MapsTo k v' m)) := {
+      SOT_Equivalence := MapInterface.Equal_kw_Equivalence _;
       SOT_lt := lt;
       SOT_cmp := compare_pure
     }.
@@ -2592,6 +2592,6 @@ Section EncapsulationOrd.
   Qed.
   Next Obligation.
     destruct (is_compare x y); constructor; auto.
-    rewrite <- map_eq_iff; assumption.
+    now apply map_eq_iff.
   Qed.
 End EncapsulationOrd.

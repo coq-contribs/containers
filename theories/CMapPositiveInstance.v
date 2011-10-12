@@ -10,7 +10,7 @@ Generalizable All Variables.
 
 (** * [CMapPositive_FMap] : an instance of [FMap] for positives *)
 Instance CMapPositive_FMap : @FMap _
-  (@SOT_as_OT _ _ _
+  (@SOT_as_OT _ _
     PositiveOrderedTypeBitsInstance.positive_rev_OrderedType) := {
   dict := @CPositiveMap.t;
   MapsTo := @CPositiveMap.MapsTo;

@@ -86,7 +86,7 @@ Class FSet `{OrderedType A} := {
   (** Sets should be ordered types as well, in order to be able
      to use sets in containers. *)
   FSet_OrderedType :>
-    SpecificOrderedType _ (Equal_pw set A In) (Equal_pw_Equivalence _ _ _)
+    SpecificOrderedType _ (Equal_pw set A In)
 }.
 Implicit Arguments set [[H] [FSet]].
 

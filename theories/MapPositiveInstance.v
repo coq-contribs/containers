@@ -10,7 +10,7 @@ Generalizable All Variables.
 
 (** * [MapPositive_FMap] : an instance of [FMap] for positives *)
 Instance MapPositive_FMap : @FMap _
-  (@SOT_as_OT _ _ _ OrderedTypeEx.positive_l2r_OrderedType) := {
+  (@SOT_as_OT _ _ OrderedTypeEx.positive_l2r_OrderedType) := {
   dict := @PositiveMap.tree;
   MapsTo := @PositiveMap.MapsTo;
   empty := @PositiveMap.empty;

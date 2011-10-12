@@ -452,7 +452,6 @@ Class SpecificOrderedType
 }.
 Instance SOT_as_OT `{SpecificOrderedType A} : OrderedType A := {
   _eq := eqA;
-
   OT_StrictOrder := SOT_StrictOrder;
   _compare_spec := SOT_compare_spec
 }.
@@ -468,7 +467,7 @@ Defined.
    purpose.
    *)
 Notation "'UsualOrderedType' A" :=
-  (SpecificOrderedType A (@eq A) eq_equivalence)(at level 30).
+  (SpecificOrderedType A (@eq A))(at level 30).
 
 (** * Facts about setoid list membership
 

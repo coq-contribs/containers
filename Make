@@ -1,11 +1,7 @@
 -R src Containers.Plugin
 -R theories Containers
--custom "$(CAMLLINK) -g -a -o $@ $^" "$(CMOFILES)" $(CONTAINERS_PLUGIN)
--custom "$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $^" "$(CMXFILES)" $(CONTAINERS_PLUGINOPT)
 -custom "
 #the following is inserted verbatim
-
-theories/Generate.vo: $(CONTAINERS_PLUGINOPT) $(CONTAINERS_PLUGIN)
 
 install-plugin:
 	install -d $(COQLIB)/user-contrib/Containers/Plugin/
@@ -31,8 +27,10 @@ COQDOC = "$(COQBIN)coqdoc -interpolate -utf8"
 OCAMLLIBS = "-I src"
 CAMLP4OPTIONS = "-loc loc"
 src/printing.ml
-src/generate.ml
+src/printing.mli
+src/generate.ml4
 src/containers_plugin_mod.ml
+src/containers_plugin.mllib
 theories/OrderedType.v
 theories/Tactics.v
 theories/OrderedTypeEx.v

@@ -1642,8 +1642,8 @@ Qed.
 
 Program Instance map_SpecificOrderedType `{OrderedType A, OrderedType B}
   : SpecificOrderedType _ (MapInterface.Equal_kw
-    (fun k v m => exists v', v === v' /\ MapsTo A _ B k v' m))
-  (MapInterface.Equal_kw_Equivalence _) := {
+    (fun k v m => exists v', v === v' /\ MapsTo A _ B k v' m)) := {
+    SOT_Equivalence := MapInterface.Equal_kw_Equivalence _;
     SOT_lt := @map_lt A H B H0;
     SOT_cmp := @map_cmp A H B H0
   }.

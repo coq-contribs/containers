@@ -457,7 +457,7 @@ Module SetList.
     Proof.
       DoubleInd.
       intros i His His'; inversion_clear His; inversion_clear His'.
-      destruct (compare x x'); auto.
+      destruct compare; auto.
     Qed.
     Hint Resolve union_Inf.
 
@@ -1047,7 +1047,7 @@ Module SetList.
       split; auto.
       intros x l Hrec f Hf.
       generalize (Hrec f Hf); clear Hrec.
-      destruct (partition f l) as [s1 s2]; simpl; intros.
+      destruct partition as [s1 s2]; simpl; intros.
       case (f x); simpl; auto.
       split; inversion_clear 1; auto.
       constructor 2; generalize (proj1 (H a)); auto.
@@ -1062,7 +1062,7 @@ Module SetList.
       split; auto.
       intros x l Hrec f Hf.
       generalize (Hrec f Hf); clear Hrec.
-      destruct (partition f l) as [s1 s2]; simpl; intros.
+      destruct partition as [s1 s2]; simpl; intros.
       case (f x); simpl; auto.
       split; inversion_clear 1; auto.
       constructor 2; generalize (proj1 (H a)); auto.
@@ -1389,7 +1389,8 @@ Program Definition set_StrictOrder `{OrderedType A} :
   @StrictOrder _ set_lt (@Equal A _) Equal_Equivalence :=
   Build_StrictOrder _ _ _ _ _ _.
 Next Obligation.
-  exact (fun x y z H1 H2 => transitivity (y:=this y) H1 H2).
+  intros x y z H1 H2. unfold set_lt, S.set_lt in *.
+  now transitivity y.
 Qed.
 Next Obligation.
   change (~Equal x y); rewrite Equal_set_eq.
@@ -1400,7 +1401,8 @@ Definition set_compare `{OrderedType A} : set A -> set A -> comparison :=
   S.set_compare.
 
 Program Instance set_OrderedType `{OrderedType A} :
-  SpecificOrderedType (set A) (@Equal A _) Equal_Equivalence := {
+  SpecificOrderedType (set A) (@Equal A _) := {
+    SOT_Equivalence := Equal_Equivalence;
     SOT_lt := set_lt;
     SOT_StrictOrder := set_StrictOrder;
     SOT_cmp := set_compare
