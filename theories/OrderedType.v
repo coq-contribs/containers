@@ -443,7 +443,8 @@ Hint Extern 1 (Proper _ _) => repeat intro; intuition order.
    relation ouf of the [OrderedType] instance and add it as a parameter.
 *)
 Class SpecificOrderedType
-  (A : Type) (eqA : relation A) `(Equivalence A eqA) := {
+  (A : Type) (eqA : relation A) := {
+  SOT_Equivalence :> Equivalence eqA ;
   SOT_lt : relation A;
   SOT_StrictOrder : StrictOrder SOT_lt eqA;
   SOT_cmp : A -> A -> comparison;
@@ -451,6 +452,7 @@ Class SpecificOrderedType
 }.
 Instance SOT_as_OT `{SpecificOrderedType A} : OrderedType A := {
   _eq := eqA;
+
   OT_StrictOrder := SOT_StrictOrder;
   _compare_spec := SOT_compare_spec
 }.
@@ -556,7 +558,7 @@ Section KeyOrderedType.
   Qed.
   Local Instance ltk_SO : RelationClasses.StrictOrder ltk.
   Proof.
-    constructor; repeat intro; unfold ltk in *; intuition order.
+    constructor; repeat intro; unfold ltk in *; intuition order. 
   Qed.
   Local Instance ltk_m : Proper (eqk ==> eqk ==> iff) ltk.
   Proof.
