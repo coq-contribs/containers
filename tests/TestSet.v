@@ -108,9 +108,11 @@ Program Fixpoint setn_aux' (A : Type) `{OT : OrderedType A} (n : nat) :
       existT _ (@set T _ _) _
   end.
 Solve Obligations using eauto with typeclass_instances.
+(*
 Next Obligation.
   exact (@SOT_as_OT (set T) _ _ _).
 Defined.
+*)
 Definition setn' (A : Type) `{OrderedType A} (n : nat) : Type :=
   projT1 (setn_aux' A n).
 
