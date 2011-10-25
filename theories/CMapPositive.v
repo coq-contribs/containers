@@ -1306,10 +1306,6 @@ Module CPositiveMap.
         destruct (option_cmp cmp o o0); destruct (equal_aux cmp T1 T'1); auto.
         destruct (option_cmp cmp o o0); discriminate H||exact H.
         eexists; eauto.
-(*
-      refine ((fun H => conj (fun k => proj1 (H k)) (fun k => proj2 (H k))) _).
-       Anomaly: Uncaught exception Invalid_argument("list_filter2"). Please report.
-*)
       split; intro k; assert (H' := H0 k); clear H0.
       destruct (find_aux k T).
         destruct H' as [e' [He'1 He'2]].

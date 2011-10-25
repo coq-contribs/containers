@@ -457,7 +457,7 @@ Module SetList.
     Proof.
       DoubleInd.
       intros i His His'; inversion_clear His; inversion_clear His'.
-      destruct compare; auto.
+      destruct (compare x x'); auto.
     Qed.
     Hint Resolve union_Inf.
 
