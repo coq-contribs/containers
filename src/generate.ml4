@@ -311,7 +311,7 @@ let make_cmp_def ind mind body =
 let load_tactic s =
   Tacinterp.interp
     (Tacexpr.TacArg
-       (Tacexpr.Reference
+       (Util.dummy_loc, Tacexpr.Reference
 	  (Libnames.Ident (dl (Names.id_of_string s)))))
 
 let load_tactic_args s lids =
@@ -320,7 +320,7 @@ let load_tactic_args s lids =
   in
     Tacinterp.interp
       (Tacexpr.TacArg
-	 (Tacexpr.TacCall (Util.dummy_loc,
+	 (Util.dummy_loc, Tacexpr.TacCall (Util.dummy_loc,
 			   Libnames.Ident (dl (Names.id_of_string s)),
 			   args)))
 
@@ -578,9 +578,9 @@ let prove_OrderedType indconstr mind body =
   in
     declare_definition id_ot
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      [] None ot None (fun _ _ -> ());
-    Classes.declare_instance false (Libnames.Ident (dl id_ot))
-
+    [] None ot None (fun loc gr ->
+		     Typeclasses.declare_instance None (loc=Decl_kinds.Local) gr)
+    
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
   let indconstr = Libnames.constr_of_global gindref in
@@ -1113,7 +1113,7 @@ open Genarg
 
 let apply_tactic s tacs =
   Tacexpr.TacArg
-    (Tacexpr.TacCall (Util.dummy_loc,
+    (Util.dummy_loc, Tacexpr.TacCall (Util.dummy_loc,
 		      Libnames.Ident (dl (Names.id_of_string s)),
 		      List.map (fun t -> Tacexpr.Tacexp t) tacs))
 
@@ -1474,8 +1474,8 @@ let mprove_OrderedType k mind =
     in
       declare_definition id_ot
 	(Decl_kinds.Global, false, Decl_kinds.Definition)
-	[] None ot None (fun _ _ -> ());
-      Classes.declare_instance false (Libnames.Ident (dl id_ot))
+	[] None ot None (fun _ gr -> 
+			 Typeclasses.declare_instance None false gr)
   in
   Array.iteri prove_ot mind.mind_packets
 

@@ -1517,7 +1517,7 @@ Qed.
 Definition map_lt `{OrderedType A, OrderedType B} : relation (dict A B) :=
   fun x y => @list_lt (A*B)
     (prod_lt _eq _lt _lt) (prod_eq _eq _eq) x.(this) y.(this).
-Program Instance map_lt_StrictOrder `{OrderedType A, OrderedType B} :
+Program Instance map_lt_StrictOrder `{OA:OrderedType A, OB: OrderedType B} :
   StrictOrder (@map_lt A _ B _) (@map_eq A _ B _).
 Next Obligation.
   intros x y z; destruct x; destruct y; destruct z; unfold map_lt; simpl.

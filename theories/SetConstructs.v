@@ -337,8 +337,8 @@ Section DisjointUnion.
     rewrite union_iff, 2map_iff.
     destruct x as [a|b]; firstorder; inversion_clear H0;
       rewrite H1; assumption.
-    repeat intro; constructor assumption.
-    repeat intro; constructor assumption.
+    repeat intro; constructor (assumption).
+    repeat intro; constructor (assumption).
   Qed.
   Global Opaque disj_union.
 

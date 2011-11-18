@@ -57,7 +57,7 @@ Require Import OrderedType.
 
 (** ** Equivalence *)
 Ltac inductive_refl := try unfold Reflexive;
-  destruct 0; try constructor reflexivity.
+  destruct 0; try constructor (reflexivity).
 
 Ltac inductive_sym := try unfold Symmetric;
   do 3 intro; destruct 0;
@@ -79,7 +79,7 @@ Ltac solve_by_trans_modulo :=
  end.
 Ltac inductive_lexico_trans :=
   do 4 intro; inversion_clear 0; intro; inversion_clear 0;
-    try constructor solve_by_trans_modulo.
+    try constructor (solve_by_trans_modulo).
 
 Ltac solve_by_irrefl :=
   match goal with
