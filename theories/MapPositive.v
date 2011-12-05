@@ -818,7 +818,6 @@ Module PositiveMap.
   apply (SortA_app (eqA:=eq_key_elt)); auto.
   apply KeyOrderedType.eqke_Equiv.
   constructor; repeat intro; unfold lt_key, ME.ltk in *; try solve [order].
-  intros; transitivity (fst y0); assumption.
   constructor; auto.
   apply In_InfA; intros.
   destruct y0.
@@ -840,7 +839,6 @@ Module PositiveMap.
   apply (SortA_app (eqA:=eq_key_elt)); auto.
   apply KeyOrderedType.eqke_Equiv.
   constructor; repeat intro; unfold lt_key, ME.ltk in *; try solve [order].
-  intros; transitivity (fst y0); assumption.
   intros x0 y0.
   do 2 rewrite InA_alt.
   intros (y1,(Hy1,H)) (y2,(Hy2,H0)).
@@ -1258,10 +1256,10 @@ Module PositiveMap.
       end.
     Property t_cmp_spec : forall x y, compare_spec t_eq t_lt x y (t_cmp x y).
     Proof.
-      induction x; destruct y; try (constructor constructor).
-      simpl; destruct (compare_dec o o0); try (constructor; constructor auto).
+      induction x; destruct y; try (constructor (constructor)).
+      simpl; destruct (compare_dec o o0); try (constructor; constructor (auto)).
       destruct (IHx1 y1); try constructor.
-      constructor assumption.
+      constructor (assumption).
       destruct (IHx2 y2); try constructor;
         constructor (solve [auto using t_eq_sym]).
       constructor (solve [auto using t_eq_sym]).

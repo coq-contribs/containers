@@ -572,7 +572,7 @@ Inductive option_lt {A} (ltA : relation A) : option A -> option A -> Prop :=
 | option_lt_Some :
   forall a a', ltA a a' -> option_lt ltA (Some a) (Some a').
 Program Instance option_StrictOrder `(OrderedType A) :
-  StrictOrder (@option_lt A _lt) (@option_eq A _).
+  StrictOrder (@option_lt A _lt) (@option_eq A _) | 10.
 Next Obligation. (* transitivity *)
   inductive_lexico_trans.
 Qed.
@@ -580,7 +580,7 @@ Next Obligation. (* irreflexivity *)
   revert x y H0; inductive_irrefl.
 Qed.
 Program Instance option_UsualStrictOrder `(UsualOrderedType A) :
-  StrictOrder (@option_lt A _lt) (@Logic.eq _).
+  StrictOrder (@option_lt A _lt) (@Logic.eq _) | 10.
 Next Obligation. (* irreflexivity *)
   intro E; inversion E; subst; clear E.
   revert y H0; induction y; intro H0; inversion H0; subst; auto; order.
