@@ -149,7 +149,7 @@ Property Plt_l2r_irrefl :
 Proof.
   induction p; intros; subst; simpl in *; try tauto; eauto.
 Qed.
-Instance positive_l2r_StrictOrder : StrictOrder Plt_l2r (@eq positive) := {
+Instance positive_l2r_StrictOrder : StrictOrder Plt_l2r (@eq positive) | 10 := {
   StrictOrder_Transitive := Plt_l2r_trans;
   StrictOrder_Irreflexive := Plt_l2r_irrefl
 }.
