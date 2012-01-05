@@ -106,10 +106,10 @@ Arguments Scope diff [type_scope _ _ set_scope set_scope].
 Arguments Scope equal [type_scope _ _ set_scope set_scope].
 Arguments Scope subset [type_scope _ _ set_scope set_scope].
 Arguments Scope fold [type_scope _ _ _ _ set_scope _].
-Arguments Scope for_all [type_scope _ _ _ _ set_scope].
-Arguments Scope exists_ [type_scope _ _ _ _ set_scope].
-Arguments Scope filter [type_scope _ _ _ _ set_scope].
-Arguments Scope partition [type_scope _ _ _ _ set_scope].
+Arguments Scope for_all [type_scope _ _ _ set_scope].
+Arguments Scope exists_ [type_scope _ _ _ set_scope].
+Arguments Scope filter [type_scope _ _ _ set_scope].
+Arguments Scope partition [type_scope _ _ _ set_scope].
 Arguments Scope cardinal [type_scope _ _ set_scope].
 Arguments Scope elements [type_scope _ _ set_scope].
 Arguments Scope choose [type_scope _ _ set_scope].
