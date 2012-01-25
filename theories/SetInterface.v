@@ -88,6 +88,7 @@ Class FSet `{OrderedType A} := {
   FSet_OrderedType :>
     SpecificOrderedType _ (Equal_pw set A In)
 }.
+
 Implicit Arguments set [[H] [FSet]].
 
 (** Set notations (see below) are interpreted in scope [set_scope],
