@@ -40,18 +40,18 @@ let print_ind_body fmt ibody =
 	 i print_id id n print_constr typ);
     fprintf fmt "}\n"
 
-let dl id = Util.dummy_loc, id
+let dl id = dummy_loc, id
 let cf cexpr = false, cexpr
-let cprop = CSort (Util.dummy_loc, Glob_term.GProp Term.Null)
+let cprop = CSort (dummy_loc, Glob_term.GProp Term.Null)
 let ccomparison = mkIdentC (Names.id_of_string "comparison")
 let bin_rel_t id_t =
-  CArrow (Util.dummy_loc, mkIdentC id_t,
-	  CArrow (Util.dummy_loc, mkIdentC id_t, cprop))
+  CArrow (dummy_loc, mkIdentC id_t,
+	  CArrow (dummy_loc, mkIdentC id_t, cprop))
 let bin_cmp_t id_t =
-  CArrow (Util.dummy_loc, mkIdentC id_t,
-	  CArrow (Util.dummy_loc, mkIdentC id_t, ccomparison))
+  CArrow (dummy_loc, mkIdentC id_t,
+	  CArrow (dummy_loc, mkIdentC id_t, ccomparison))
 
-let hole = CHole (Util.dummy_loc, None)
+let hole = CHole (dummy_loc, None)
 
 (* à la v8.2... *)
 let declare_definition
@@ -69,7 +69,7 @@ let declare_definition
 let equiv_ref =
   Libnames.Qualid (dl (Libnames.qualid_of_string "Equivalence.equiv"))
 let mk_equiv x y =
-  CApp (Util.dummy_loc, (None, mkRefC equiv_ref),
+  CApp (dummy_loc, (None, mkRefC equiv_ref),
 (* 			 mkIdentC (Names.id_of_string "equiv")), *)
 	[mkIdentC x, None; mkIdentC y, None])
 
@@ -92,8 +92,8 @@ let rec prod_n_i acc n =
 let eq_constr_i eqid cid carity =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Util.dummy_loc, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Util.dummy_loc, (None, mkIdentC cid), ybar) in
+  let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
+  let cy = CApp (dummy_loc, (None, mkIdentC cid), ybar) in
   let rec eq_n_i acc n =
     match n with
       | 0 -> acc
@@ -101,14 +101,14 @@ let eq_constr_i eqid cid carity =
 	  let xn = Nameops.make_ident "x" (Some n) in
 	  let yn = Nameops.make_ident "y" (Some n) in
 	    eq_n_i
-	      (CArrow (Util.dummy_loc,
+	      (CArrow (dummy_loc,
 		       mk_equiv xn yn,
 		       acc))
 	      (n-1)
   in
-    CProdN (Util.dummy_loc, (prod_n_i [] carity),
+    CProdN (dummy_loc, (prod_n_i [] carity),
 	    eq_n_i
-	      (CApp (Util.dummy_loc, (None, mkIdentC eqid),
+	      (CApp (dummy_loc, (None, mkIdentC eqid),
 		     [cx, None; cy, None])) carity)
 
 let make_eq_mutual ind mind body =
@@ -128,48 +128,48 @@ let lt_StrictOrder_ref =
   Libnames.Qualid
     (dl (Libnames.qualid_of_string "Containers.OrderedType.lt_StrictOrder"))
 let mk_lt x y =
-  CApp (Util.dummy_loc, (None, mkRefC lt_StrictOrder_ref),
+  CApp (dummy_loc, (None, mkRefC lt_StrictOrder_ref),
 	[mkIdentC x, None; mkIdentC y, None])
 
 let lexi_constr ltid cid carity =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Util.dummy_loc, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Util.dummy_loc, (None, mkIdentC cid), ybar) in
+  let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
+  let cy = CApp (dummy_loc, (None, mkIdentC cid), ybar) in
   let rec one_lexico_case acc = function
     | 0 -> acc
     | n ->
 	let xn = Nameops.make_ident "x" (Some n) in
 	let yn = Nameops.make_ident "y" (Some n) in
 	  one_lexico_case
-	    (CArrow (Util.dummy_loc, mk_equiv xn yn, acc)) (n-1) in
+	    (CArrow (dummy_loc, mk_equiv xn yn, acc)) (n-1) in
   let rec all_lexico_cases goal acc = function
     | 0 -> acc
     | n ->
 	let xn = Nameops.make_ident "x" (Some n) in
 	let yn = Nameops.make_ident "y" (Some n) in
-	let base = CArrow (Util.dummy_loc, mk_lt xn yn, goal) in
+	let base = CArrow (dummy_loc, mk_lt xn yn, goal) in
 	let c = one_lexico_case base (n-1) in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
 	  all_lexico_cases goal ((name, c)::acc) (n-1) in
   let goal =
-    CApp (Util.dummy_loc, (None, mkIdentC ltid), [cx, None; cy, None]) in
+    CApp (dummy_loc, (None, mkIdentC ltid), [cx, None; cy, None]) in
   let cases =
     all_lexico_cases goal [] carity in
     List.map (fun (name, c) ->
 		cf (dl name,
-		    CProdN (Util.dummy_loc, (prod_n_i [] carity), c)))
+		    CProdN (dummy_loc, (prod_n_i [] carity), c)))
       cases
 
 let inter_constr ltid cid carity otherids otherarities =
   let xbar = app_expl_i [] "x" carity in
-  let cx = CApp (Util.dummy_loc, (None, mkIdentC cid), xbar) in
+  let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
   let aux id ar =
     let ybar = app_expl_i [] "y" ar in
-    let cy = CApp (Util.dummy_loc, (None, mkIdentC id), ybar) in
+    let cy = CApp (dummy_loc, (None, mkIdentC id), ybar) in
     let goal =
-      CApp (Util.dummy_loc, (None, mkIdentC ltid), [cx, None; cy, None]) in
+      CApp (dummy_loc, (None, mkIdentC ltid), [cx, None; cy, None]) in
     let name =
       add_suffix ltid ("_"^(Names.string_of_id cid)^
 			 "_"^(Names.string_of_id id)) in
@@ -180,7 +180,7 @@ let inter_constr ltid cid carity otherids otherarities =
     in
     let foralls1 = prod [] "y" ar in
     let foralls = prod foralls1 "x" carity in
-      cf (dl name, CProdN (Util.dummy_loc, foralls, goal))
+      cf (dl name, CProdN (dummy_loc, foralls, goal))
   in
     List.map2 aux otherids otherarities
 
@@ -213,18 +213,18 @@ let compare_ref =
   Libnames.Qualid
     (dl (Libnames.qualid_of_string "Containers.OrderedType.compare"))
 let mk_cmp x y =
-  CApp (Util.dummy_loc, (None, mkRefC compare_ref),
+  CApp (dummy_loc, (None, mkRefC compare_ref),
 	[mkIdentC x, None; mkIdentC y, None])
 
-let pathole = CPatAtom (Util.dummy_loc, None)
+let pathole = CPatAtom (dummy_loc, None)
 let rec lholes = function
   | 0 -> []
   | n -> pathole::(lholes (n-1))
-let patc r l = CPatCstr (Util.dummy_loc, r, l)
+let patc r l = CPatCstr (dummy_loc, r, l)
 let rec lpats v acc = function
   | 0 -> acc
   | n ->
-      let p = CPatAtom (Util.dummy_loc,
+      let p = CPatAtom (dummy_loc,
 			Some (Libnames.Ident
 				(dl (Nameops.make_ident v (Some n))))) in
 	lpats v (p::acc) (n-1)
@@ -244,25 +244,25 @@ let lexi_eqn_constr r carity =
       | x::xs, y::ys ->
 	  let item = [(mk_cmp x y, (None, None))] in
 	  let brlt =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Lt []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Lt []])],
 	     mkIdentC id_Lt) in
 	  let breq =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Eq []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Eq []])],
 	     branch xs ys) in
 	  let brgt =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Gt []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Gt []])],
 	     mkIdentC id_Gt) in
-	    CCases (Util.dummy_loc, RegularStyle, None, item,
+	    CCases (dummy_loc, RegularStyle, None, item,
 		    [brlt; breq; brgt])
       | _, _ -> failwith "Lists should have the same size"
   in
   let xbar = lvars [] "x" carity in
   let ybar = lvars [] "y" carity in
-    (Util.dummy_loc,
-     [(Util.dummy_loc, [patc r (lpats "x" [] carity);
+    (dummy_loc,
+     [(dummy_loc, [patc r (lpats "x" [] carity);
 			patc r (lpats "y" [] carity)])],
      branch xbar ybar)
 
@@ -277,12 +277,12 @@ let rec branches_constr cmpid names arities =
 	let r = Libnames.Ident (dl cid) in
 	let eqn_lexi = lexi_eqn_constr r carity in
 	let eqn_inter1 =
-	  (Util.dummy_loc,
-	   [(Util.dummy_loc, [patc r (lholes carity); pathole])],
+	  (dummy_loc,
+	   [(dummy_loc, [patc r (lholes carity); pathole])],
 	   mkIdentC id_Lt) in
 	let eqn_inter2 =
-	  (Util.dummy_loc,
-	   [(Util.dummy_loc, [pathole; patc r (lholes carity)])],
+	  (dummy_loc,
+	   [(dummy_loc, [pathole; patc r (lholes carity)])],
 	   mkIdentC id_Gt) in
 	  eqn_lexi::eqn_inter1::eqn_inter2::
 	    (branches_constr cmpid otherids otherars)
@@ -298,9 +298,9 @@ let make_cmp_def ind mind body =
   let items = [(mkIdentC x, (None, None));
 	       (mkIdentC y, (None, None))] in
   let branches = branches_constr id_cmp names decls in
-  let body =  CCases (Util.dummy_loc, RegularStyle, None, items, branches) in
+  let body =  CCases (dummy_loc, RegularStyle, None, items, branches) in
   let def =
-    CLambdaN (Util.dummy_loc,
+    CLambdaN (dummy_loc,
 	      [([dl (Names.Name x); dl (Names.Name y)],
 		Default Glob_term.Explicit,
 		mkIdentC id_t)],
@@ -311,7 +311,7 @@ let make_cmp_def ind mind body =
 let load_tactic s =
   Tacinterp.interp
     (Tacexpr.TacArg
-       (Util.dummy_loc, Tacexpr.Reference
+       (dummy_loc, Tacexpr.Reference
 	  (Libnames.Ident (dl (Names.id_of_string s)))))
 
 let load_tactic_args s lids =
@@ -320,7 +320,7 @@ let load_tactic_args s lids =
   in
     Tacinterp.interp
       (Tacexpr.TacArg
-	 (Util.dummy_loc, Tacexpr.TacCall (Util.dummy_loc,
+	 (dummy_loc, Tacexpr.TacCall (dummy_loc,
 			   Libnames.Ident (dl (Names.id_of_string s)),
 			   args)))
 
@@ -396,7 +396,7 @@ let prove_Equivalence indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_equiv = add_suffix id_t "_eq_Equivalence" in
   let equiv =
-    CApp (Util.dummy_loc,
+    CApp (dummy_loc,
 	  (None, mkIdentC (Names.id_of_string "Build_Equivalence")),
 	  [hole, None; hole, None;
 	   mkIdentC (add_suffix id_t "_eq_refl"), None;
@@ -517,7 +517,7 @@ let prove_StrictOrder indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_strict = add_suffix id_t "_lt_StrictOrder" in
   let strict =
-    CApp (Util.dummy_loc,
+    CApp (dummy_loc,
 	  (None, mkRefC build_strictorder_ref),
 	  [hole, None; hole, None; hole, None;
 	   mkIdentC (add_suffix id_t "_eq_Equivalence"), None;
@@ -568,7 +568,7 @@ let prove_OrderedType indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_ot = add_suffix id_t "_OrderedType" in
   let ot =
-    CApp (Util.dummy_loc,
+    CApp (dummy_loc,
 	  (None, mkRefC build_ot_ref),
 	  [hole, None; hole, None; hole, None;
 	   mkIdentC (add_suffix id_t "_eq_Equivalence"), None;
@@ -631,8 +631,8 @@ let rec map3 f l1 l2 l3 =
 let req_constr_i eqid cid wp carity cmask =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Util.dummy_loc, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Util.dummy_loc, (None, mkIdentC cid), ybar) in
+  let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
+  let cy = CApp (dummy_loc, (None, mkIdentC cid), ybar) in
   let rec eq_n_i acc cmask n =
     match n, cmask with
       | 0, [] -> acc
@@ -641,20 +641,20 @@ let req_constr_i eqid cid wp carity cmask =
 	  let yn = Nameops.make_ident "y" (Some n) in
 	  let t =
 	    if mask then
-	      CApp (Util.dummy_loc, (None, mkIdentC eqid),
+	      CApp (dummy_loc, (None, mkIdentC eqid),
 		    [mkIdentC xn, None; mkIdentC yn, None])
 	    else
 	      mk_equiv xn yn
 	  in
 	    eq_n_i
-	      (CArrow (Util.dummy_loc, t, acc))
+	      (CArrow (dummy_loc, t, acc))
 	      cmask
 	      (n-1)
       | _, _ -> failwith "Mask does not match arity."
   in
-    CProdN (Util.dummy_loc, (prod_n_i [] carity),
+    CProdN (dummy_loc, (prod_n_i [] carity),
 	    eq_n_i
-	      (CApp (Util.dummy_loc, (None, mkIdentC eqid),
+	      (CApp (dummy_loc, (None, mkIdentC eqid),
 		     [cx, None; cy, None])) (List.rev cmask) carity)
 
 let rmake_eq_mutual ind mask mind body =
@@ -674,8 +674,8 @@ let rmake_eq_mutual ind mask mind body =
 let rlexi_constr eqid ltid cid carity cmask =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Util.dummy_loc, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Util.dummy_loc, (None, mkIdentC cid), ybar) in
+  let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
+  let cy = CApp (dummy_loc, (None, mkIdentC cid), ybar) in
   let rec one_lexico_case acc n mask = match n, mask with
     | 0, [] -> acc
     | n, mask::masks ->
@@ -683,11 +683,11 @@ let rlexi_constr eqid ltid cid carity cmask =
 	let yn = Nameops.make_ident "y" (Some n) in
 	let t =
 	  if mask then
-	    CApp (Util.dummy_loc, (None, mkIdentC eqid),
+	    CApp (dummy_loc, (None, mkIdentC eqid),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_equiv xn yn in
 	  one_lexico_case
-	    (CArrow (Util.dummy_loc, t, acc)) (n-1) masks
+	    (CArrow (dummy_loc, t, acc)) (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
   let rec all_lexico_cases goal acc n cmask = match n, cmask with
@@ -697,10 +697,10 @@ let rlexi_constr eqid ltid cid carity cmask =
 	let yn = Nameops.make_ident "y" (Some n) in
 	let t =
 	  if mask then
-	    CApp (Util.dummy_loc, (None, mkIdentC ltid),
+	    CApp (dummy_loc, (None, mkIdentC ltid),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_lt xn yn in
-	let base = CArrow (Util.dummy_loc, t, goal) in
+	let base = CArrow (dummy_loc, t, goal) in
 	let c = one_lexico_case base (n-1) masks in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
@@ -708,12 +708,12 @@ let rlexi_constr eqid ltid cid carity cmask =
     | _, _ -> failwith "Mask does not match arity."
   in
   let goal =
-    CApp (Util.dummy_loc, (None, mkIdentC ltid), [cx, None; cy, None]) in
+    CApp (dummy_loc, (None, mkIdentC ltid), [cx, None; cy, None]) in
   let cases =
     all_lexico_cases goal [] carity (List.rev cmask) in
     List.map (fun (name, c) ->
 		cf (dl name,
-		    CProdN (Util.dummy_loc, (prod_n_i [] carity), c)))
+		    CProdN (dummy_loc, (prod_n_i [] carity), c)))
       cases
 
 let rec rlt_constr eqid ltid names arities mask =
@@ -736,7 +736,7 @@ let rmake_lt_mutual ind mask mind body =
 
 let mk_cmp_if cmpid x y mask =
   if mask then
-    CApp (Util.dummy_loc, (None, mkIdentC cmpid),
+    CApp (dummy_loc, (None, mkIdentC cmpid),
 	  [mkIdentC x, None; mkIdentC y, None])
   else mk_cmp x y
 
@@ -748,25 +748,25 @@ let rlexi_eqn_constr r cmpid carity cmask =
       | x::xs, y::ys, mask::masks ->
 	  let item = [(mk_cmp_if cmpid x y mask, (None, None))] in
 	  let brlt =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Lt []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Lt []])],
 	     mkIdentC id_Lt) in
 	  let breq =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Eq []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Eq []])],
 	     branch xs ys masks) in
 	  let brgt =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Gt []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Gt []])],
 	     mkIdentC id_Gt) in
-	    CCases (Util.dummy_loc, RegularStyle, None, item,
+	    CCases (dummy_loc, RegularStyle, None, item,
 		    [brlt; breq; brgt])
       | _, _, _ -> failwith "Lists should have the same size"
   in
   let xbar = lvars [] "x" carity in
   let ybar = lvars [] "y" carity in
-    (Util.dummy_loc,
-     [(Util.dummy_loc, [patc r (lpats "x" [] carity);
+    (dummy_loc,
+     [(dummy_loc, [patc r (lpats "x" [] carity);
 			patc r (lpats "y" [] carity)])],
      branch xbar ybar cmask)
 
@@ -781,12 +781,12 @@ let rec rbranches_constr cmpid names arities mask =
 	let r = Libnames.Ident (dl cid) in
 	let eqn_lexi = rlexi_eqn_constr r cmpid carity cmask in
 	let eqn_inter1 =
-	  (Util.dummy_loc,
-	   [(Util.dummy_loc, [patc r (lholes carity); pathole])],
+	  (dummy_loc,
+	   [(dummy_loc, [patc r (lholes carity); pathole])],
 	   mkIdentC id_Lt) in
 	let eqn_inter2 =
-	  (Util.dummy_loc,
-	   [(Util.dummy_loc, [pathole; patc r (lholes carity)])],
+	  (dummy_loc,
+	   [(dummy_loc, [pathole; patc r (lholes carity)])],
 	   mkIdentC id_Gt) in
 	  eqn_lexi::eqn_inter1::eqn_inter2::
 	    (rbranches_constr cmpid otherids otherars othermasks)
@@ -802,7 +802,7 @@ let rmake_cmp_def ind mask mind body =
   let items = [(mkIdentC x, (None, None));
 	       (mkIdentC y, (None, None))] in
   let branches = rbranches_constr id_cmp names decls mask in
-  let body =  CCases (Util.dummy_loc, RegularStyle, None, items, branches) in
+  let body =  CCases (dummy_loc, RegularStyle, None, items, branches) in
     (dl id_cmp, (None, Topconstr.CStructRec),
      [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
 		    Default Glob_term.Explicit, mkIdentC id_t)],
@@ -875,8 +875,8 @@ let make_masks mind =
 let meq_constr_i eqid eqids cid carity (cmask : int list) =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Util.dummy_loc, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Util.dummy_loc, (None, mkIdentC cid), ybar) in
+  let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
+  let cy = CApp (dummy_loc, (None, mkIdentC cid), ybar) in
   let rec eq_n_i acc cmask n =
     match n, cmask with
       | 0, [] -> acc
@@ -885,20 +885,20 @@ let meq_constr_i eqid eqids cid carity (cmask : int list) =
 	  let yn = Nameops.make_ident "y" (Some n) in
 	  let t =
 	    if mask >= 0 then
-	      CApp (Util.dummy_loc, (None, mkIdentC eqids.(mask)),
+	      CApp (dummy_loc, (None, mkIdentC eqids.(mask)),
 		    [mkIdentC xn, None; mkIdentC yn, None])
 	    else
 	      mk_equiv xn yn
 	  in
 	    eq_n_i
-	      (CArrow (Util.dummy_loc, t, acc))
+	      (CArrow (dummy_loc, t, acc))
 	      cmask
 	      (n-1)
       | _, _ -> failwith "Mask does not match arity."
   in
-    CProdN (Util.dummy_loc, (prod_n_i [] carity),
+    CProdN (dummy_loc, (prod_n_i [] carity),
 	    eq_n_i
-	      (CApp (Util.dummy_loc, (None, mkIdentC eqid),
+	      (CApp (dummy_loc, (None, mkIdentC eqid),
 		     [cx, None; cy, None])) (List.rev cmask) carity)
 
 let mmake_eq_mutual ind (masks : int list list array) mind =
@@ -928,7 +928,7 @@ let mprove_refl k ids ids_eq mind =
   let x = Nameops.make_ident "x" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    CProdN (Util.dummy_loc,
+    CProdN (dummy_loc,
 	    [[dl (Names.Name x)],
 	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
@@ -956,11 +956,11 @@ let mprove_sym k ids ids_eq mind =
   let y = Nameops.make_ident "y" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    CProdN (Util.dummy_loc,
+    CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
 	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
-	    CArrow (Util.dummy_loc,
+	    CArrow (dummy_loc,
 		    mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
 		    mkAppC (ceq i, [mkIdentC y; mkIdentC x]))) in
   let goals =
@@ -987,13 +987,13 @@ let mprove_trans k ids ids_eq mind =
   let z = Nameops.make_ident "z" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    CProdN (Util.dummy_loc,
+    CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
 	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
-	    CArrow (Util.dummy_loc,
+	    CArrow (dummy_loc,
 		    mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
-		    CArrow (Util.dummy_loc,
+		    CArrow (dummy_loc,
 			    mkAppC (ceq i, [mkIdentC y; mkIdentC z]),
 			    mkAppC (ceq i, [mkIdentC x; mkIdentC z])))) in
   let goals =
@@ -1022,7 +1022,7 @@ let mprove_Equivalence k mind =
     mprove_sym k ids ids_eq mind;
     mprove_trans k ids ids_eq mind;
   let equiv i =
-    CApp (Util.dummy_loc,
+    CApp (dummy_loc,
 	  (None, mkIdentC (Names.id_of_string "Build_Equivalence")),
 	  [hole, None; hole, None;
 	   mkIdentC (add_suffix ids.(i) "_eq_refl"), None;
@@ -1038,8 +1038,8 @@ let mprove_Equivalence k mind =
 let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Util.dummy_loc, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Util.dummy_loc, (None, mkIdentC cid), ybar) in
+  let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
+  let cy = CApp (dummy_loc, (None, mkIdentC cid), ybar) in
   let rec one_lexico_case acc n mask = match n, mask with
     | 0, [] -> acc
     | n, mask::masks ->
@@ -1047,11 +1047,11 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
 	let yn = Nameops.make_ident "y" (Some n) in
 	let t =
 	  if mask >= 0 then
-	    CApp (Util.dummy_loc, (None, mkIdentC ids_eq.(mask)),
+	    CApp (dummy_loc, (None, mkIdentC ids_eq.(mask)),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_equiv xn yn in
 	  one_lexico_case
-	    (CArrow (Util.dummy_loc, t, acc)) (n-1) masks
+	    (CArrow (dummy_loc, t, acc)) (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
   let rec all_lexico_cases goal acc n cmask = match n, cmask with
@@ -1061,10 +1061,10 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
 	let yn = Nameops.make_ident "y" (Some n) in
 	let t =
 	  if mask >= 0 then
-	    CApp (Util.dummy_loc, (None, mkIdentC ids_lt.(mask)),
+	    CApp (dummy_loc, (None, mkIdentC ids_lt.(mask)),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_lt xn yn in
-	let base = CArrow (Util.dummy_loc, t, goal) in
+	let base = CArrow (dummy_loc, t, goal) in
 	let c = one_lexico_case base (n-1) masks in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
@@ -1072,12 +1072,12 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
     | _, _ -> failwith "Mask does not match arity."
   in
   let goal =
-    CApp (Util.dummy_loc, (None, mkIdentC ltid), [cx, None; cy, None]) in
+    CApp (dummy_loc, (None, mkIdentC ltid), [cx, None; cy, None]) in
   let cases =
     all_lexico_cases goal [] carity (List.rev cmask) in
     List.map (fun (name, c) ->
 		cf (dl name,
-		    CProdN (Util.dummy_loc, (prod_n_i [] carity), c)))
+		    CProdN (dummy_loc, (prod_n_i [] carity), c)))
       cases
 
 let rec mlt_constr ids_eq ids_lt ltid names arities mask =
@@ -1113,14 +1113,14 @@ open Genarg
 
 let apply_tactic s tacs =
   Tacexpr.TacArg
-    (Util.dummy_loc, Tacexpr.TacCall (Util.dummy_loc,
+    (dummy_loc, Tacexpr.TacCall (dummy_loc,
 		      Libnames.Ident (dl (Names.id_of_string s)),
 		      List.map (fun t -> Tacexpr.Tacexp t) tacs))
 
 let seq_eapply lids : raw_tactic_expr =
   let b = Nameops.make_ident "__B" None in
   let apply id =
-    TacAtom (Util.dummy_loc,
+    TacAtom (dummy_loc,
 	     TacApply (true, false,
 		       [(mkIdentC id,
 			 Glob_term.ImplicitBindings [mkIdentC b])],
@@ -1132,13 +1132,13 @@ let seq_eapply_sym lids lsyms : raw_tactic_expr =
   let b = Nameops.make_ident "__B" None in
   let apply_with_sym id idsym =
     TacThens(
-      TacAtom (Util.dummy_loc,
+      TacAtom (dummy_loc,
 	       TacApply (true, false,
 			 [(mkIdentC id,
 			   Glob_term.ImplicitBindings [mkIdentC b])],
 			 None)),
       [
-	TacAtom (Util.dummy_loc,
+	TacAtom (dummy_loc,
 		 TacApply (true, false,
 			   [(mkIdentC idsym, Glob_term.NoBindings)],
 			   None));
@@ -1161,8 +1161,8 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 	   ((),mkIdentC (add_suffix id_eq "_sym"))::
 	     ((),mkIdentC (add_suffix id_eq "_trans"))::acc
 	) [] ids_eq in
-      TacAtom (Util.dummy_loc,
-	       TacExtend (Util.dummy_loc, "eauto",
+      TacAtom (dummy_loc,
+	       TacExtend (dummy_loc, "eauto",
 			  [in_gen (wit_opt rawwit_int_or_var) None;
 			   in_gen (wit_opt rawwit_int_or_var) None;
 			   in_gen Eauto.rawwit_auto_using lems;
@@ -1170,23 +1170,23 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   in
   let prove_eq_lt_and_gt () =
     let lemma_eq_lt i =
-      CProdN (Util.dummy_loc,
+      CProdN (dummy_loc,
 	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
 	       Default Glob_term.Explicit,
 	       mkIdentC ids.(i)],
-	      CArrow (Util.dummy_loc,
+	      CArrow (dummy_loc,
 		      mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
-		      CArrow (Util.dummy_loc,
+		      CArrow (dummy_loc,
 			      mkAppC (clt i, [mkIdentC x; mkIdentC z]),
 			      mkAppC (clt i, [mkIdentC y; mkIdentC z])))) in
     let lemma_eq_gt i =
-      CProdN (Util.dummy_loc,
+      CProdN (dummy_loc,
 	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
 	       Default Glob_term.Explicit,
 	       mkIdentC ids.(i)],
-	      CArrow (Util.dummy_loc,
+	      CArrow (dummy_loc,
 		      mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
-		      CArrow (Util.dummy_loc,
+		      CArrow (dummy_loc,
 			      mkAppC (clt i, [mkIdentC z; mkIdentC x]),
 			      mkAppC (clt i, [mkIdentC z; mkIdentC y])))) in
     let lemmas_eq_lt =
@@ -1220,13 +1220,13 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     Lemmas.save_named true
   in
   let goal i =
-    CProdN (Util.dummy_loc,
+    CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
 	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
-	    CArrow (Util.dummy_loc,
+	    CArrow (dummy_loc,
 		    mkAppC (clt i, [mkIdentC x; mkIdentC y]),
-		    CArrow (Util.dummy_loc,
+		    CArrow (dummy_loc,
 			    mkAppC (clt i, [mkIdentC y; mkIdentC z]),
 			    mkAppC (clt i, [mkIdentC x; mkIdentC z])))) in
   let goals =
@@ -1268,13 +1268,13 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
   let ceq i = mkIdentC ids_eq.(i) in
   let cfalse = mkIdentC (Names.id_of_string "False") in
   let goal i =
-    CProdN (Util.dummy_loc,
+    CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
 	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
-	    CArrow (Util.dummy_loc,
+	    CArrow (dummy_loc,
 		    mkAppC (clt i, [mkIdentC x; mkIdentC y]),
-		    CArrow (Util.dummy_loc,
+		    CArrow (dummy_loc,
 			    mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
 			    cfalse))) in
   let goals =
@@ -1302,7 +1302,7 @@ let mprove_StrictOrder k mind =
   mprove_lt_irrefl k ids ids_eq ids_lt mind;
   mprove_lt_trans k ids ids_eq ids_lt mind;
   let strict i =
-    CApp (Util.dummy_loc,
+    CApp (dummy_loc,
 	  (None, mkRefC build_strictorder_ref),
 	  [hole, None; hole, None; hole, None;
 	   mkIdentC ids_equiv.(i), None;
@@ -1317,7 +1317,7 @@ let mprove_StrictOrder k mind =
 
 let mmk_cmp_if ids_cmp x y mask =
   if mask >= 0 then
-    CApp (Util.dummy_loc, (None, mkIdentC ids_cmp.(mask)),
+    CApp (dummy_loc, (None, mkIdentC ids_cmp.(mask)),
 	  [mkIdentC x, None; mkIdentC y, None])
   else mk_cmp x y
 
@@ -1329,25 +1329,25 @@ let mlexi_eqn_constr r ids_cmp carity cmask =
       | x::xs, y::ys, mask::masks ->
 	  let item = [(mmk_cmp_if ids_cmp x y mask, (None, None))] in
 	  let brlt =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Lt []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Lt []])],
 	     mkIdentC id_Lt) in
 	  let breq =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Eq []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Eq []])],
 	     branch xs ys masks) in
 	  let brgt =
-	    (Util.dummy_loc,
-	     [(Util.dummy_loc, [patc ref_Gt []])],
+	    (dummy_loc,
+	     [(dummy_loc, [patc ref_Gt []])],
 	     mkIdentC id_Gt) in
-	    CCases (Util.dummy_loc, RegularStyle, None, item,
+	    CCases (dummy_loc, RegularStyle, None, item,
 		    [brlt; breq; brgt])
       | _, _, _ -> failwith "Lists should have the same size"
   in
   let xbar = lvars [] "x" carity in
   let ybar = lvars [] "y" carity in
-    (Util.dummy_loc,
-     [(Util.dummy_loc, [patc r (lpats "x" [] carity);
+    (dummy_loc,
+     [(dummy_loc, [patc r (lpats "x" [] carity);
 			patc r (lpats "y" [] carity)])],
      branch xbar ybar cmask)
 
@@ -1362,12 +1362,12 @@ let rec mbranches_constr ids_cmp names arities mask =
 	let r = Libnames.Ident (dl cid) in
 	let eqn_lexi = mlexi_eqn_constr r ids_cmp carity cmask in
 	let eqn_inter1 =
-	  (Util.dummy_loc,
-	   [(Util.dummy_loc, [patc r (lholes carity); pathole])],
+	  (dummy_loc,
+	   [(dummy_loc, [patc r (lholes carity); pathole])],
 	   mkIdentC id_Lt) in
 	let eqn_inter2 =
-	  (Util.dummy_loc,
-	   [(Util.dummy_loc, [pathole; patc r (lholes carity)])],
+	  (dummy_loc,
+	   [(dummy_loc, [pathole; patc r (lholes carity)])],
 	   mkIdentC id_Gt) in
 	  eqn_lexi::eqn_inter1::eqn_inter2::
 	    (mbranches_constr ids_cmp otherids otherars othermasks)
@@ -1384,7 +1384,7 @@ let mmake_cmp_def k ind masks mind =
     let items = [(mkIdentC x, (None, None));
 		 (mkIdentC y, (None, None))] in
     let branches = mbranches_constr ids_cmp names decls masks.(i) in
-    CCases (Util.dummy_loc, RegularStyle, None, items, branches)
+    CCases (dummy_loc, RegularStyle, None, items, branches)
   in
   let make_block i body =
     (dl ids_cmp.(i), (None, Topconstr.CStructRec),
@@ -1396,7 +1396,7 @@ let mmake_cmp_def k ind masks mind =
   match k with
     | Simple ->
 	let def =
-	  CLambdaN (Util.dummy_loc,
+	  CLambdaN (dummy_loc,
 		    [([dl (Names.Name x); dl (Names.Name y)],
 		      Default Glob_term.Explicit,
 		      mkIdentC ids.(0))],
@@ -1426,7 +1426,7 @@ let mprove_compare_spec k ids mind =
   let ccmp i = mkIdentC (ids_cmp.(i)) in
   let ccomp_spec = mkIdentC (Names.id_of_string "compare_spec") in
   let goal i =
-    CProdN (Util.dummy_loc,
+    CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
 	     Default Glob_term.Explicit,
 	     mkIdentC ids.(i)],
@@ -1441,7 +1441,7 @@ let mprove_compare_spec k ids mind =
 			(Some (dl (add_suffix id "_compare_spec")),
 			 ([], goal i, None))) ids) in
   let using_sym : raw_tactic_expr =
-    TacAtom (Util.dummy_loc,
+    TacAtom (dummy_loc,
 	     TacAuto (None, List.map mkIdentC (Array.to_list ids_sym),
 		      Some [])) in
   let comparespectactic = match k with
@@ -1464,7 +1464,7 @@ let mprove_OrderedType k mind =
   let prove_ot i body =
     let id_ot = add_suffix ids.(i) "_OrderedType" in
     let ot =
-      CApp (Util.dummy_loc,
+      CApp (dummy_loc,
 	    (None, mkRefC build_ot_ref),
 	    [hole, None; hole, None; hole, None;
 	     mkIdentC (add_suffix ids.(i) "_eq_Equivalence"), None;
