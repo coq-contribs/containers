@@ -58,12 +58,9 @@ let declare_definition
     id (loc, boxed_flag, def_obj_kind)
     binder_list red_expr_opt constr_expr
     constr_expr_opt decl_hook =
-  let (def_entry, man_impl) =
-    Command.interp_definition binder_list red_expr_opt constr_expr
-      constr_expr_opt
-  in
-    Command.declare_definition
-      id (loc, def_obj_kind) def_entry man_impl decl_hook
+  Command.do_definition
+  id (loc, def_obj_kind) binder_list red_expr_opt constr_expr
+  constr_expr_opt decl_hook
 
 (* building the equality predicate *)
 let equiv_ref =

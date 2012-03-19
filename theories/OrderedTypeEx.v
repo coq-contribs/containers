@@ -227,7 +227,7 @@ Qed.
 
 (** ** [unit] *)
 Program Instance unit_StrictOrder : StrictOrder (fun _ _ => False) (@eq unit).
-Solve Obligations using contradiction.
+Solve Obligations with contradiction.
 Program Instance unit_OrderedType : UsualOrderedType unit := {
   SOT_lt := fun _ _ => False;
   SOT_cmp := fun _ _ => Eq;
