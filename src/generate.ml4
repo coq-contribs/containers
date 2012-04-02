@@ -1439,8 +1439,8 @@ let mprove_compare_spec k ids mind =
 			 ([], goal i, None))) ids) in
   let using_sym : raw_tactic_expr =
     TacAtom (dummy_loc,
-	     TacAuto (None, List.map mkIdentC (Array.to_list ids_sym),
-		      Some [])) in
+	     TacAuto (Tacexpr.Off, None,
+		      List.map mkIdentC (Array.to_list ids_sym), Some [])) in
   let comparespectactic = match k with
     | Simple -> load_tactic "solve_compare_spec"
     | Recursive ->
