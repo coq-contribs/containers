@@ -45,11 +45,11 @@ let cf cexpr = false, cexpr
 let cprop = CSort (dummy_loc, Glob_term.GProp Term.Null)
 let ccomparison = mkIdentC (Names.id_of_string "comparison")
 let bin_rel_t id_t =
-  CArrow (dummy_loc, mkIdentC id_t,
-	  CArrow (dummy_loc, mkIdentC id_t, cprop))
+  CProdN (dummy_loc, [[(dl Names.Anonymous);(dl Names.Anonymous)],
+		       Default Glob_term.Explicit, mkIdentC id_t], cprop)
 let bin_cmp_t id_t =
-  CArrow (dummy_loc, mkIdentC id_t,
-	  CArrow (dummy_loc, mkIdentC id_t, ccomparison))
+  CProdN (dummy_loc, [[(dl Names.Anonymous);(dl Names.Anonymous)],
+		       Default Glob_term.Explicit, mkIdentC id_t], ccomparison)
 
 let hole = CHole (dummy_loc, None)
 
@@ -91,23 +91,14 @@ let eq_constr_i eqid cid carity =
   let ybar = app_expl_i [] "y" carity in
   let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
   let cy = CApp (dummy_loc, (None, mkIdentC cid), ybar) in
-  let rec eq_n_i acc n =
-    match n with
-      | 0 -> acc
-      | n ->
-	  let xn = Nameops.make_ident "x" (Some n) in
-	  let yn = Nameops.make_ident "y" (Some n) in
-	    eq_n_i
-	      (CArrow (dummy_loc,
-		       mk_equiv xn yn,
-		       acc))
-	      (n-1)
-  in
-    CProdN (dummy_loc, (prod_n_i [] carity),
-	    eq_n_i
-	      (CApp (dummy_loc, (None, mkIdentC eqid),
-		     [cx, None; cy, None])) carity)
-
+  CProdN (dummy_loc,
+	  (prod_n_i [] carity) @ (Util.list_tabulate
+				    (fun n ->
+				      let xn = Nameops.make_ident "x" (Some (n+1)) in
+				      let yn = Nameops.make_ident "y" (Some (n+1)) in
+				      [dummy_loc,Names.Anonymous],Default Glob_term.Explicit, mk_equiv xn yn)
+				    carity),
+	  (CApp (dummy_loc, (None, mkIdentC eqid), [cx, None; cy, None])))
 let make_eq_mutual ind mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
@@ -133,20 +124,20 @@ let lexi_constr ltid cid carity =
   let ybar = app_expl_i [] "y" carity in
   let cx = CApp (dummy_loc, (None, mkIdentC cid), xbar) in
   let cy = CApp (dummy_loc, (None, mkIdentC cid), ybar) in
-  let rec one_lexico_case acc = function
-    | 0 -> acc
-    | n ->
-	let xn = Nameops.make_ident "x" (Some n) in
-	let yn = Nameops.make_ident "y" (Some n) in
-	  one_lexico_case
-	    (CArrow (dummy_loc, mk_equiv xn yn, acc)) (n-1) in
   let rec all_lexico_cases goal acc = function
     | 0 -> acc
     | n ->
 	let xn = Nameops.make_ident "x" (Some n) in
 	let yn = Nameops.make_ident "y" (Some n) in
-	let base = CArrow (dummy_loc, mk_lt xn yn, goal) in
-	let c = one_lexico_case base (n-1) in
+	let base = CProdN (dummy_loc, [[dummy_loc,Names.Anonymous],
+				       Default Glob_term.Explicit,
+				       mk_lt xn yn], goal) in
+	let c = CProdN (dummy_loc, Util.list_tabulate
+	  (fun n ->
+	    let xn = Nameops.make_ident "x" (Some (n+1)) in
+	    let yn = Nameops.make_ident "y" (Some (n+1)) in
+	    [dummy_loc,Names.Anonymous],Default Glob_term.Explicit, mk_lt xn yn)
+	  (n-1), base) in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
 	  all_lexico_cases goal ((name, c)::acc) (n-1) in
@@ -644,15 +635,15 @@ let req_constr_i eqid cid wp carity cmask =
 	      mk_equiv xn yn
 	  in
 	    eq_n_i
-	      (CArrow (dummy_loc, t, acc))
+	      (([dummy_loc,Names.Anonymous],Default Glob_term.Explicit, t) :: acc)
 	      cmask
 	      (n-1)
       | _, _ -> failwith "Mask does not match arity."
   in
-    CProdN (dummy_loc, (prod_n_i [] carity),
-	    eq_n_i
-	      (CApp (dummy_loc, (None, mkIdentC eqid),
-		     [cx, None; cy, None])) (List.rev cmask) carity)
+  CProdN (dummy_loc, (prod_n_i [] carity) @
+    (eq_n_i [] (List.rev cmask) carity),
+	  CApp (dummy_loc, (None, mkIdentC eqid),
+		[cx, None; cy, None]))
 
 let rmake_eq_mutual ind mask mind body =
   let id_t = body.mind_typename in
@@ -683,8 +674,9 @@ let rlexi_constr eqid ltid cid carity cmask =
 	    CApp (dummy_loc, (None, mkIdentC eqid),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_equiv xn yn in
-	  one_lexico_case
-	    (CArrow (dummy_loc, t, acc)) (n-1) masks
+	one_lexico_case
+	  (([dummy_loc,Names.Anonymous],Default Glob_term.Explicit, t) :: acc)
+	  (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
   let rec all_lexico_cases goal acc n cmask = match n, cmask with
@@ -697,8 +689,9 @@ let rlexi_constr eqid ltid cid carity cmask =
 	    CApp (dummy_loc, (None, mkIdentC ltid),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_lt xn yn in
-	let base = CArrow (dummy_loc, t, goal) in
-	let c = one_lexico_case base (n-1) masks in
+	let c = CProdN (dummy_loc,
+			one_lexico_case [[dummy_loc,Names.Anonymous],Default Glob_term.Explicit,t] (n-1) masks,
+			goal) in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
 	  all_lexico_cases goal ((name, c)::acc) (n-1) masks
@@ -888,15 +881,15 @@ let meq_constr_i eqid eqids cid carity (cmask : int list) =
 	      mk_equiv xn yn
 	  in
 	    eq_n_i
-	      (CArrow (dummy_loc, t, acc))
+	      (([dl Names.Anonymous],Default Glob_term.Explicit, t) :: acc)
 	      cmask
 	      (n-1)
       | _, _ -> failwith "Mask does not match arity."
   in
-    CProdN (dummy_loc, (prod_n_i [] carity),
-	    eq_n_i
-	      (CApp (dummy_loc, (None, mkIdentC eqid),
-		     [cx, None; cy, None])) (List.rev cmask) carity)
+  CProdN (dummy_loc, (prod_n_i [] carity) @
+    (eq_n_i [] (List.rev cmask) carity),
+	  (CApp (dummy_loc, (None, mkIdentC eqid),
+		 [cx, None; cy, None])))
 
 let mmake_eq_mutual ind (masks : int list list array) mind =
   let ids = Array.map (fun b -> b.mind_typename) mind.mind_packets in
@@ -956,10 +949,11 @@ let mprove_sym k ids ids_eq mind =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
 	     Default Glob_term.Explicit,
-	     mkIdentC ids.(i)],
-	    CArrow (dummy_loc,
-		    mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
-		    mkAppC (ceq i, [mkIdentC y; mkIdentC x]))) in
+	     mkIdentC ids.(i);
+	     [dummy_loc, Names.Anonymous],
+	     Default Glob_term.Explicit,
+	     mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
+	    mkAppC (ceq i, [mkIdentC y; mkIdentC x])) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
@@ -987,12 +981,14 @@ let mprove_trans k ids ids_eq mind =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
 	     Default Glob_term.Explicit,
-	     mkIdentC ids.(i)],
-	    CArrow (dummy_loc,
-		    mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
-		    CArrow (dummy_loc,
-			    mkAppC (ceq i, [mkIdentC y; mkIdentC z]),
-			    mkAppC (ceq i, [mkIdentC x; mkIdentC z])))) in
+	     mkIdentC ids.(i);
+	     [dummy_loc, Names.Anonymous],
+	     Default Glob_term.Explicit,
+	     mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+	     [dummy_loc, Names.Anonymous],
+	     Default Glob_term.Explicit,
+	     mkAppC (ceq i, [mkIdentC y; mkIdentC z])],
+	    mkAppC (ceq i, [mkIdentC x; mkIdentC z])) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
@@ -1047,8 +1043,9 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
 	    CApp (dummy_loc, (None, mkIdentC ids_eq.(mask)),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_equiv xn yn in
-	  one_lexico_case
-	    (CArrow (dummy_loc, t, acc)) (n-1) masks
+	one_lexico_case
+	  (([dummy_loc,Names.Anonymous],Default Glob_term.Explicit, t) :: acc)
+	  (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
   let rec all_lexico_cases goal acc n cmask = match n, cmask with
@@ -1061,8 +1058,9 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
 	    CApp (dummy_loc, (None, mkIdentC ids_lt.(mask)),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_lt xn yn in
-	let base = CArrow (dummy_loc, t, goal) in
-	let c = one_lexico_case base (n-1) masks in
+	let c = CProdN (dummy_loc,
+			one_lexico_case [[dl Names.Anonymous],Default Glob_term.Explicit, t] (n-1) masks,
+			goal) in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
 	  all_lexico_cases goal ((name, c)::acc) (n-1) masks
@@ -1170,22 +1168,26 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
       CProdN (dummy_loc,
 	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
 	       Default Glob_term.Explicit,
-	       mkIdentC ids.(i)],
-	      CArrow (dummy_loc,
-		      mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
-		      CArrow (dummy_loc,
-			      mkAppC (clt i, [mkIdentC x; mkIdentC z]),
-			      mkAppC (clt i, [mkIdentC y; mkIdentC z])))) in
+	       mkIdentC ids.(i);
+	       [dummy_loc,Names.Anonymous],
+	       Default Glob_term.Explicit,
+	       mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+	       [dummy_loc,Names.Anonymous],
+	       Default Glob_term.Explicit,
+	       mkAppC (clt i, [mkIdentC x; mkIdentC z])],
+	      mkAppC (clt i, [mkIdentC y; mkIdentC z])) in
     let lemma_eq_gt i =
       CProdN (dummy_loc,
 	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
 	       Default Glob_term.Explicit,
-	       mkIdentC ids.(i)],
-	      CArrow (dummy_loc,
-		      mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
-		      CArrow (dummy_loc,
-			      mkAppC (clt i, [mkIdentC z; mkIdentC x]),
-			      mkAppC (clt i, [mkIdentC z; mkIdentC y])))) in
+	       mkIdentC ids.(i);
+	       [dummy_loc,Names.Anonymous],
+	       Default Glob_term.Explicit,
+	       mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+	       [dummy_loc,Names.Anonymous],
+	       Default Glob_term.Explicit,
+	       mkAppC (clt i, [mkIdentC z; mkIdentC x])],
+	      mkAppC (clt i, [mkIdentC z; mkIdentC y])) in
     let lemmas_eq_lt =
       Array.to_list (Array.mapi
 		       (fun i id ->
@@ -1220,12 +1222,14 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
 	     Default Glob_term.Explicit,
-	     mkIdentC ids.(i)],
-	    CArrow (dummy_loc,
-		    mkAppC (clt i, [mkIdentC x; mkIdentC y]),
-		    CArrow (dummy_loc,
-			    mkAppC (clt i, [mkIdentC y; mkIdentC z]),
-			    mkAppC (clt i, [mkIdentC x; mkIdentC z])))) in
+	     mkIdentC ids.(i);
+	     [dummy_loc,Names.Anonymous],
+	     Default Glob_term.Explicit,
+	     mkAppC (clt i, [mkIdentC x; mkIdentC y]);
+	     [dummy_loc,Names.Anonymous],
+	     Default Glob_term.Explicit,
+	     mkAppC (clt i, [mkIdentC y; mkIdentC z])],
+	    mkAppC (clt i, [mkIdentC x; mkIdentC z])) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_lt ->
@@ -1268,12 +1272,14 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
 	     Default Glob_term.Explicit,
-	     mkIdentC ids.(i)],
-	    CArrow (dummy_loc,
-		    mkAppC (clt i, [mkIdentC x; mkIdentC y]),
-		    CArrow (dummy_loc,
-			    mkAppC (ceq i, [mkIdentC x; mkIdentC y]),
-			    cfalse))) in
+	     mkIdentC ids.(i);
+	     [dummy_loc,Names.Anonymous],
+	     Default Glob_term.Explicit,
+	     mkAppC (clt i, [mkIdentC x; mkIdentC y]);
+	     [dummy_loc,Names.Anonymous],
+	     Default Glob_term.Explicit,
+	     mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
+	    cfalse) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id ->
