@@ -784,13 +784,11 @@ Section MoreWeakFacts.
       intros. symmetry.
       rewrite <- find_NoDup, InA_rev; eauto.
       rewrite find_NoDup; assumption.
-      apply eqke_Equiv.
       apply NoDupA_rev; auto; apply eqk_Equiv.
       case_eq (findA (eqb k) (rev l)); auto.
       intros e.
       rewrite <- find_NoDup, InA_rev; eauto using NoDupA_rev.
       rewrite find_NoDup; congruence.
-      apply eqke_Equiv.
       apply NoDupA_rev; auto; apply eqk_Equiv.
     Qed.
 
@@ -894,7 +892,6 @@ Section MoreWeakFacts.
         Add k e m' m'' -> P m' a -> P m'' (ff (k,e) a)).
       intros k e a m' m'' H ? ? ?; eapply Hstep; eauto.
       revert H; unfold l; rewrite InA_rev, elements_mapsto_iff; auto.
-      apply eqke_Equiv.
       assert (Hdup : NoDupA eqk l).
       unfold l. apply NoDupA_rev; auto.
       apply eqk_Equiv.
@@ -981,7 +978,6 @@ Section MoreWeakFacts.
         R a b -> R (f k e a) (g k e b)).
       intros; apply Rstep; auto;
         rewrite elements_mapsto_iff, <- InA_rev; auto.
-      apply eqke_Equiv.
       clearbody l; clear Rstep m.
       induction l; simpl; auto.
     Qed.
@@ -1150,7 +1146,6 @@ Section MoreWeakFacts.
         contradict H.
         exists e.
         rewrite elements_mapsto_iff; auto.
-        apply eqke_Equiv.
         intros a.
         rewrite InA_cons; do 2 (rewrite InA_rev by apply eqke_Equiv);
           destruct a as (a,b); fold (eq_key_elt (elt:=elt));

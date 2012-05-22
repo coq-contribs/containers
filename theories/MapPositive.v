@@ -818,8 +818,6 @@ Module PositiveMap.
   apply (SortA_app (eqA:=eq_key_elt)); auto.
   apply KeyOrderedType.eqke_Equiv.
   constructor; repeat intro; unfold lt_key, ME.ltk in *; try solve [order].
-  intros; transitivity (fst y0); assumption.
-  constructor; auto.
   apply In_InfA; intros.
   destruct y0.
   red; red; simpl.
@@ -839,8 +837,6 @@ Module PositiveMap.
   (* None *)
   apply (SortA_app (eqA:=eq_key_elt)); auto.
   apply KeyOrderedType.eqke_Equiv.
-  constructor; repeat intro; unfold lt_key, ME.ltk in *; try solve [order].
-  intros; transitivity (fst y0); assumption.
   intros x0 y0.
   do 2 rewrite InA_alt.
   intros (y1,(Hy1,H)) (y2,(Hy2,H0)).
