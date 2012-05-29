@@ -12,9 +12,10 @@ open Flags
 
 open Nameops
 open Entries
+open Constrexpr
+open Constrexpr_ops
 open Topconstr
 open Printing
-module DK = Decl_kinds
 
 type inductive_kind = Simple | Recursive | Mutual
 let pr_kind = function
@@ -42,14 +43,14 @@ let print_ind_body fmt ibody =
 
 let dl id = dummy_loc, id
 let cf cexpr = false, cexpr
-let cprop = CSort (dummy_loc, Glob_term.GProp Term.Null)
+let cprop = CSort (dummy_loc, Misctypes.GProp)
 let ccomparison = mkIdentC (Names.id_of_string "comparison")
 let bin_rel_t id_t =
   CProdN (dummy_loc, [[(dl Names.Anonymous);(dl Names.Anonymous)],
-		       Default Glob_term.Explicit, mkIdentC id_t], cprop)
+		       Default Decl_kinds.Explicit, mkIdentC id_t], cprop)
 let bin_cmp_t id_t =
   CProdN (dummy_loc, [[(dl Names.Anonymous);(dl Names.Anonymous)],
-		       Default Glob_term.Explicit, mkIdentC id_t], ccomparison)
+		       Default Decl_kinds.Explicit, mkIdentC id_t], ccomparison)
 
 let hole = CHole (dummy_loc, None)
 
@@ -83,7 +84,7 @@ let rec prod_n_i acc n =
     | n ->
 	let xn = Names.Name (Nameops.make_ident "x" (Some n)) in
 	let yn = Names.Name (Nameops.make_ident "y" (Some n)) in
-	  prod_n_i (([dl xn; dl yn], Default Glob_term.Explicit, hole)::acc)
+	  prod_n_i (([dl xn; dl yn], Default Decl_kinds.Explicit, hole)::acc)
 	    (n-1)
 
 let eq_constr_i eqid cid carity =
@@ -96,7 +97,7 @@ let eq_constr_i eqid cid carity =
 				    (fun n ->
 				      let xn = Nameops.make_ident "x" (Some (n+1)) in
 				      let yn = Nameops.make_ident "y" (Some (n+1)) in
-				      [dummy_loc,Names.Anonymous],Default Glob_term.Explicit, mk_equiv xn yn)
+				      [dummy_loc,Names.Anonymous],Default Decl_kinds.Explicit, mk_equiv xn yn)
 				    carity),
 	  (CApp (dummy_loc, (None, mkIdentC eqid), [cx, None; cy, None])))
 let make_eq_mutual ind mind body =
@@ -130,13 +131,13 @@ let lexi_constr ltid cid carity =
 	let xn = Nameops.make_ident "x" (Some n) in
 	let yn = Nameops.make_ident "y" (Some n) in
 	let base = CProdN (dummy_loc, [[dummy_loc,Names.Anonymous],
-				       Default Glob_term.Explicit,
+				       Default Decl_kinds.Explicit,
 				       mk_lt xn yn], goal) in
 	let c = CProdN (dummy_loc, Util.list_tabulate
 	  (fun n ->
 	    let xn = Nameops.make_ident "x" (Some (n+1)) in
 	    let yn = Nameops.make_ident "y" (Some (n+1)) in
-	    [dummy_loc,Names.Anonymous],Default Glob_term.Explicit, mk_lt xn yn)
+	    [dummy_loc,Names.Anonymous],Default Decl_kinds.Explicit, mk_lt xn yn)
 	  (n-1), base) in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
@@ -164,7 +165,7 @@ let inter_constr ltid cid carity otherids otherarities =
     let rec prod acc v = function
       | 0 -> acc
       | n -> let xn = Names.Name (Nameops.make_ident v (Some n)) in
-	  prod (([dl xn], Default Glob_term.Explicit, hole)::acc) v (n-1)
+	  prod (([dl xn], Default Decl_kinds.Explicit, hole)::acc) v (n-1)
     in
     let foralls1 = prod [] "y" ar in
     let foralls = prod foralls1 "x" carity in
@@ -290,7 +291,7 @@ let make_cmp_def ind mind body =
   let def =
     CLambdaN (dummy_loc,
 	      [([dl (Names.Name x); dl (Names.Name y)],
-		Default Glob_term.Explicit,
+		Default Decl_kinds.Explicit,
 		mkIdentC id_t)],
 	      body) in
     id_cmp, def
@@ -313,11 +314,15 @@ let load_tactic_args s lids =
 			   args)))
 
 open Tacticals
+
+let property_kind = (Decl_kinds.Global, Decl_kinds.Proof Decl_kinds.Property)
+let lemma_kind = (Decl_kinds.Global, Decl_kinds.Proof Decl_kinds.Lemma)
+
 let prove_refl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
-  let ceq = Libnames.constr_of_reference
+  let ceq = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
   let goal =
     mkNamedProd x indconstr
@@ -326,7 +331,7 @@ let prove_refl indconstr mind body =
     load_tactic "rinductive_refl"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_refl")
-      (DK.Global, DK.Proof DK.Property) goal (fun _ _ -> ());
+      property_kind goal (fun _ _ -> ());
     Pfedit.by refltactic;
     Lemmas.save_named true
 
@@ -335,7 +340,7 @@ let prove_sym indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let ceq = Libnames.constr_of_reference
+  let ceq = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
   let goal =
     mkNamedProd x indconstr
@@ -347,7 +352,7 @@ let prove_sym indconstr mind body =
     load_tactic "rinductive_sym"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_sym")
-      (DK.Global, DK.Proof DK.Property) goal (fun _ _ -> ());
+      property_kind goal (fun _ _ -> ());
     Pfedit.by symtactic;
     Lemmas.save_named true
 
@@ -357,7 +362,7 @@ let prove_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let ceq = Libnames.constr_of_reference
+  let ceq = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
   let goal =
     mkNamedProd x indconstr
@@ -373,7 +378,7 @@ let prove_trans indconstr mind body =
     load_tactic "rinductive_trans"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_trans")
-      (DK.Global, DK.Proof DK.Property) goal (fun _ _ -> ());
+      property_kind goal (fun _ _ -> ());
     Pfedit.by transtactic;
     Lemmas.save_named true
 
@@ -404,9 +409,9 @@ let prove_lt_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let clt = Libnames.constr_of_reference
+  let clt = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Libnames.constr_of_reference
+  let ceq = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
   let prove_eq_lt_and_gt () =
     let id_eq_sym = add_suffix id_t "_eq_sym" in
@@ -438,11 +443,11 @@ let prove_lt_trans indconstr mind body =
       load_tactic_args "rinductive_eq_gt" [id_eq_trans]
     in
       Lemmas.start_proof (add_suffix id_t "_eq_lt")
-	(DK.Global, DK.Proof DK.Lemma) lemma_eq_lt (fun _ _ -> ());
+	lemma_kind lemma_eq_lt (fun _ _ -> ());
       Pfedit.by solve_eq_lt;
       Lemmas.save_named true;
       Lemmas.start_proof (add_suffix id_t "_eq_gt")
-	(DK.Global, DK.Proof DK.Lemma) lemma_eq_gt (fun _ _ -> ());
+	lemma_kind lemma_eq_gt (fun _ _ -> ());
       Pfedit.by solve_eq_gt;
       Lemmas.save_named true
   in
@@ -463,7 +468,7 @@ let prove_lt_trans indconstr mind body =
   in
   prove_eq_lt_and_gt ();
   Lemmas.start_proof (add_suffix id_t "_lt_trans")
-    (DK.Global, DK.Proof DK.Property) goal (fun _ _ -> ());
+    property_kind goal (fun _ _ -> ());
   Pfedit.by transtactic;
   Lemmas.save_named true
 
@@ -473,11 +478,11 @@ let prove_lt_irrefl indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = Libnames.constr_of_reference
+  let clt = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Libnames.constr_of_reference
+  let ceq = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
-  let cfalse = Libnames.constr_of_reference
+  let cfalse = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl (Names.id_of_string "False")))) in
   let goal =
     mkNamedProd x indconstr
@@ -492,7 +497,7 @@ let prove_lt_irrefl indconstr mind body =
     load_tactic "rinductive_irrefl"
   in
     Lemmas.start_proof (add_suffix id_t "_lt_irrefl")
-      (DK.Global, DK.Proof DK.Property) goal (fun _ _ -> ());
+      property_kind goal (fun _ _ -> ());
     Pfedit.by irrefltactic;
     Lemmas.save_named true
 
@@ -525,13 +530,13 @@ let prove_t_compare_spec indconstr mind body =
   let id_cmp = add_suffix id_t "_cmp" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = Libnames.constr_of_reference
+  let clt = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Libnames.constr_of_reference
+  let ceq = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
-  let ccmp = Libnames.constr_of_reference
+  let ccmp = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_cmp))) in
-  let ccomp_spec = Libnames.constr_of_reference
+  let ccomp_spec = Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident
 		       (dl (Names.id_of_string "compare_spec")))) in
   let goal =
@@ -544,7 +549,7 @@ let prove_t_compare_spec indconstr mind body =
     load_tactic_args "rsolve_compare_spec" [add_suffix id_t "_eq_sym"]
   in
   Lemmas.start_proof (add_suffix id_t "_compare_spec")
-    (DK.Global, DK.Proof DK.Property) goal (fun _ _ -> ());
+    property_kind goal (fun _ _ -> ());
   Pfedit.by spectactic;
   Lemmas.save_named true
 
@@ -571,7 +576,7 @@ let prove_OrderedType indconstr mind body =
     
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
-  let indconstr = Libnames.constr_of_global gindref in
+  let indconstr = Globnames.constr_of_global gindref in
   (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_inductive (Global.env ()) indconstr in
@@ -635,7 +640,7 @@ let req_constr_i eqid cid wp carity cmask =
 	      mk_equiv xn yn
 	  in
 	    eq_n_i
-	      (([dummy_loc,Names.Anonymous],Default Glob_term.Explicit, t) :: acc)
+	      (([dummy_loc,Names.Anonymous],Default Decl_kinds.Explicit, t) :: acc)
 	      cmask
 	      (n-1)
       | _, _ -> failwith "Mask does not match arity."
@@ -675,7 +680,7 @@ let rlexi_constr eqid ltid cid carity cmask =
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_equiv xn yn in
 	one_lexico_case
-	  (([dummy_loc,Names.Anonymous],Default Glob_term.Explicit, t) :: acc)
+	  (([dummy_loc,Names.Anonymous],Default Decl_kinds.Explicit, t) :: acc)
 	  (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
@@ -690,7 +695,7 @@ let rlexi_constr eqid ltid cid carity cmask =
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_lt xn yn in
 	let c = CProdN (dummy_loc,
-			one_lexico_case [[dummy_loc,Names.Anonymous],Default Glob_term.Explicit,t] (n-1) masks,
+			one_lexico_case [[dummy_loc,Names.Anonymous],Default Decl_kinds.Explicit,t] (n-1) masks,
 			goal) in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
@@ -793,9 +798,9 @@ let rmake_cmp_def ind mask mind body =
 	       (mkIdentC y, (None, None))] in
   let branches = rbranches_constr id_cmp names decls mask in
   let body =  CCases (dummy_loc, RegularStyle, None, items, branches) in
-    (dl id_cmp, (None, Topconstr.CStructRec),
+    (dl id_cmp, (None, Constrexpr.CStructRec),
      [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
-		    Default Glob_term.Explicit, mkIdentC id_t)],
+		    Default Decl_kinds.Explicit, mkIdentC id_t)],
      ccomparison,
      Some body)
 
@@ -806,7 +811,7 @@ let make_mask body =
 
 let generate_rec_ot gref =
   let gindref = Nametab.global gref in
-  let indconstr = Libnames.constr_of_global gindref in
+  let indconstr = Globnames.constr_of_global gindref in
     (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
@@ -844,7 +849,7 @@ let generate_rec_ot gref =
 open Declarations
 
 let c_of_id id =
-  Libnames.constr_of_reference
+  Globnames.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id)))
 
 exception FoundEqual of int
@@ -881,7 +886,7 @@ let meq_constr_i eqid eqids cid carity (cmask : int list) =
 	      mk_equiv xn yn
 	  in
 	    eq_n_i
-	      (([dl Names.Anonymous],Default Glob_term.Explicit, t) :: acc)
+	      (([dl Names.Anonymous],Default Decl_kinds.Explicit, t) :: acc)
 	      cmask
 	      (n-1)
       | _, _ -> failwith "Mask does not match arity."
@@ -920,7 +925,7 @@ let mprove_refl k ids ids_eq mind =
   let goal i =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x)],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkIdentC ids.(i)],
 	    mkAppC (ceq i, [mkIdentC x; mkIdentC x])) in
   let goals =
@@ -934,7 +939,7 @@ let mprove_refl k ids ids_eq mind =
 		   | Recursive -> "rinductive_refl"
 		   | Mutual -> "minductive_refl")
   in
-    Lemmas.start_proof_com (DK.Global, DK.Proof DK.Property)
+    Lemmas.start_proof_com property_kind
       goals (fun _ _ -> ());
     for i = 1 to mind.mind_ntypes do
       Pfedit.by refltactic
@@ -948,10 +953,10 @@ let mprove_sym k ids ids_eq mind =
   let goal i =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkIdentC ids.(i);
 	     [dummy_loc, Names.Anonymous],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
 	    mkAppC (ceq i, [mkIdentC y; mkIdentC x])) in
   let goals =
@@ -965,7 +970,7 @@ let mprove_sym k ids ids_eq mind =
 		   | Recursive -> "rinductive_sym"
 		   | Mutual -> "minductive_sym")
   in
-    Lemmas.start_proof_com (DK.Global, DK.Proof DK.Property)
+    Lemmas.start_proof_com property_kind
       goals (fun _ _ -> ());
     for i = 1 to mind.mind_ntypes do
       Pfedit.by symtactic
@@ -980,13 +985,13 @@ let mprove_trans k ids ids_eq mind =
   let goal i =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkIdentC ids.(i);
 	     [dummy_loc, Names.Anonymous],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
 	     [dummy_loc, Names.Anonymous],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkAppC (ceq i, [mkIdentC y; mkIdentC z])],
 	    mkAppC (ceq i, [mkIdentC x; mkIdentC z])) in
   let goals =
@@ -1000,7 +1005,7 @@ let mprove_trans k ids ids_eq mind =
 		   | Recursive -> "rinductive_trans"
 		   | Mutual -> "minductive_trans")
   in
-    Lemmas.start_proof_com (DK.Global, DK.Proof DK.Property)
+    Lemmas.start_proof_com property_kind
       goals (fun _ _ -> ());
     for i = 1 to mind.mind_ntypes do
       Pfedit.by transtactic
@@ -1044,7 +1049,7 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_equiv xn yn in
 	one_lexico_case
-	  (([dummy_loc,Names.Anonymous],Default Glob_term.Explicit, t) :: acc)
+	  (([dummy_loc,Names.Anonymous],Default Decl_kinds.Explicit, t) :: acc)
 	  (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
@@ -1059,7 +1064,7 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_lt xn yn in
 	let c = CProdN (dummy_loc,
-			one_lexico_case [[dl Names.Anonymous],Default Glob_term.Explicit, t] (n-1) masks,
+			one_lexico_case [[dl Names.Anonymous],Default Decl_kinds.Explicit, t] (n-1) masks,
 			goal) in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
@@ -1118,7 +1123,7 @@ let seq_eapply lids : raw_tactic_expr =
     TacAtom (dummy_loc,
 	     TacApply (true, false,
 		       [(mkIdentC id,
-			 Glob_term.ImplicitBindings [mkIdentC b])],
+			 Misctypes.ImplicitBindings [mkIdentC b])],
 		       None))
   in
     TacFun ([Some b], TacFirst (List.map apply lids))
@@ -1130,12 +1135,12 @@ let seq_eapply_sym lids lsyms : raw_tactic_expr =
       TacAtom (dummy_loc,
 	       TacApply (true, false,
 			 [(mkIdentC id,
-			   Glob_term.ImplicitBindings [mkIdentC b])],
+			   Misctypes.ImplicitBindings [mkIdentC b])],
 			 None)),
       [
 	TacAtom (dummy_loc,
 		 TacApply (true, false,
-			   [(mkIdentC idsym, Glob_term.NoBindings)],
+			   [(mkIdentC idsym, Misctypes.NoBindings)],
 			   None));
 	TacId []
       ])
@@ -1167,25 +1172,25 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     let lemma_eq_lt i =
       CProdN (dummy_loc,
 	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	       Default Glob_term.Explicit,
+	       Default Decl_kinds.Explicit,
 	       mkIdentC ids.(i);
 	       [dummy_loc,Names.Anonymous],
-	       Default Glob_term.Explicit,
+	       Default Decl_kinds.Explicit,
 	       mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
 	       [dummy_loc,Names.Anonymous],
-	       Default Glob_term.Explicit,
+	       Default Decl_kinds.Explicit,
 	       mkAppC (clt i, [mkIdentC x; mkIdentC z])],
 	      mkAppC (clt i, [mkIdentC y; mkIdentC z])) in
     let lemma_eq_gt i =
       CProdN (dummy_loc,
 	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	       Default Glob_term.Explicit,
+	       Default Decl_kinds.Explicit,
 	       mkIdentC ids.(i);
 	       [dummy_loc,Names.Anonymous],
-	       Default Glob_term.Explicit,
+	       Default Decl_kinds.Explicit,
 	       mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
 	       [dummy_loc,Names.Anonymous],
-	       Default Glob_term.Explicit,
+	       Default Decl_kinds.Explicit,
 	       mkAppC (clt i, [mkIdentC z; mkIdentC x])],
 	      mkAppC (clt i, [mkIdentC z; mkIdentC y])) in
     let lemmas_eq_lt =
@@ -1205,13 +1210,13 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
       Tacinterp.interp (apply_tactic "minductive_eq_lt_gt"
 			  [apply_tactic "msolve_eq_gt" [solve_arg]])
     in
-    Lemmas.start_proof_com (DK.Global, DK.Proof DK.Property)
+    Lemmas.start_proof_com property_kind
       lemmas_eq_lt (fun _ _ -> ());
       for i = 1 to mind.mind_ntypes do
 	Pfedit.by eqlttactic;
       done;
       Lemmas.save_named true;
-    Lemmas.start_proof_com (DK.Global, DK.Proof DK.Property)
+    Lemmas.start_proof_com property_kind
       lemmas_eq_gt (fun _ _ -> ());
     for i = 1 to mind.mind_ntypes do
       Pfedit.by eqgttactic
@@ -1221,13 +1226,13 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   let goal i =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkIdentC ids.(i);
 	     [dummy_loc,Names.Anonymous],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkAppC (clt i, [mkIdentC x; mkIdentC y]);
 	     [dummy_loc,Names.Anonymous],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkAppC (clt i, [mkIdentC y; mkIdentC z])],
 	    mkAppC (clt i, [mkIdentC x; mkIdentC z])) in
   let goals =
@@ -1255,7 +1260,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 			      [strans; seqgt; seqlt])
   in
   if k = Simple then () else prove_eq_lt_and_gt ();
-  Lemmas.start_proof_com (DK.Global, DK.Proof DK.Property)
+  Lemmas.start_proof_com property_kind
     goals (fun _ _ -> ());
   for i = 1 to mind.mind_ntypes do
     Pfedit.by transtactic
@@ -1271,13 +1276,13 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
   let goal i =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkIdentC ids.(i);
 	     [dummy_loc,Names.Anonymous],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkAppC (clt i, [mkIdentC x; mkIdentC y]);
 	     [dummy_loc,Names.Anonymous],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
 	    cfalse) in
   let goals =
@@ -1289,7 +1294,7 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
     load_tactic (if k = Simple then "inductive_irrefl"
 		 else "minductive_irrefl")
   in
-  Lemmas.start_proof_com (DK.Global, DK.Proof DK.Property)
+  Lemmas.start_proof_com property_kind
     goals (fun _ _ -> ());
   for i = 1 to mind.mind_ntypes do
     Pfedit.by irrefltactic
@@ -1390,9 +1395,9 @@ let mmake_cmp_def k ind masks mind =
     CCases (dummy_loc, RegularStyle, None, items, branches)
   in
   let make_block i body =
-    (dl ids_cmp.(i), (None, Topconstr.CStructRec),
+    (dl ids_cmp.(i), (None, Constrexpr.CStructRec),
      [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
-		    Default Glob_term.Explicit, mkIdentC ids.(i))],
+		    Default Decl_kinds.Explicit, mkIdentC ids.(i))],
      ccomparison,
      Some (make_body i body))
   in
@@ -1401,7 +1406,7 @@ let mmake_cmp_def k ind masks mind =
 	let def =
 	  CLambdaN (dummy_loc,
 		    [([dl (Names.Name x); dl (Names.Name y)],
-		      Default Glob_term.Explicit,
+		      Default Decl_kinds.Explicit,
 		      mkIdentC ids.(0))],
 		    make_body 0 mind.mind_packets.(0))
 	in
@@ -1431,7 +1436,7 @@ let mprove_compare_spec k ids mind =
   let goal i =
     CProdN (dummy_loc,
 	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Glob_term.Explicit,
+	     Default Decl_kinds.Explicit,
 	     mkIdentC ids.(i)],
 	    mkAppC (ccomp_spec,
 		    [ ceq i; clt i;
@@ -1454,7 +1459,7 @@ let mprove_compare_spec k ids mind =
     | Mutual ->
 	Tacinterp.interp (apply_tactic "msolve_compare_spec" [using_sym])
   in
-  Lemmas.start_proof_com (DK.Global, DK.Proof DK.Property)
+  Lemmas.start_proof_com property_kind
     goals (fun _ _ -> ());
   for i = 1 to mind.mind_ntypes do
     Pfedit.by comparespectactic
@@ -1486,7 +1491,7 @@ let generate_mutual_ot gref =
   Coqlib.check_required_library ["Coq";"Classes";"Equivalence"];
   Coqlib.check_required_library ["Containers";"Tactics"];
   let gindref = Nametab.global gref in
-  let indconstr = Libnames.constr_of_global gindref in
+  let indconstr = Globnames.constr_of_global gindref in
   (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
@@ -1528,7 +1533,7 @@ let generate_ot = generate_mutual_ot
 
 let generate_scheme gref =
   let gindref = Nametab.global gref in
-  let indconstr = Libnames.constr_of_global gindref in
+  let indconstr = Globnames.constr_of_global gindref in
     (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
@@ -1545,9 +1550,9 @@ let generate_scheme gref =
 		let id' = dl (add_suffix id "_mutual_ind") in
 		  (Some id',
 		   Vernacexpr.InductionScheme(true, (* dependent *)
-					      Genarg.AN
+					      Misctypes.AN
 						(Libnames.Ident (dl id)),
-					      Glob_term.GProp Term.Null))
+					      Misctypes.GProp))
 	     ) names
   in
   Indschemes.do_scheme schemes
