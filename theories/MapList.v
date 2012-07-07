@@ -1648,7 +1648,7 @@ Program Instance map_SpecificOrderedType `{OrderedType A, OrderedType B}
     SOT_cmp := @map_cmp A H B H0
   }.
 Next Obligation.
-  destruct (map_lt_StrictOrder (B:=B)).
+  destruct (map_lt_StrictOrder (A:=A)).
   constructor.
   exact StrictOrder_Transitive.
   repeat intro; refine (StrictOrder_Irreflexive x y H1 _).
