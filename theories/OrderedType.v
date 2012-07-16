@@ -2,6 +2,7 @@ Require Import Setoid Morphisms.
 Require Export Coq.Classes.Equivalence.
 Open Scope equiv_scope.
 
+Global Set Asymmetric Patterns.
 Generalizable All Variables.
 
 (** * Ordered Types
