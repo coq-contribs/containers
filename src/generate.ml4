@@ -93,7 +93,7 @@ let eq_constr_i eqid cid carity =
   let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
   let cy = CApp (Loc.ghost, (None, mkIdentC cid), ybar) in
   CProdN (Loc.ghost,
-	  (prod_n_i [] carity) @ (Util.list_tabulate
+	  (prod_n_i [] carity) @ (Util.List.tabulate
 				    (fun n ->
 				      let xn = Nameops.make_ident "x" (Some (n+1)) in
 				      let yn = Nameops.make_ident "y" (Some (n+1)) in
@@ -133,7 +133,7 @@ let lexi_constr ltid cid carity =
 	let base = CProdN (Loc.ghost, [[Loc.ghost,Names.Anonymous],
 				       Default Decl_kinds.Explicit,
 				       mk_lt xn yn], goal) in
-	let c = CProdN (Loc.ghost, Util.list_tabulate
+	let c = CProdN (Loc.ghost, Util.List.tabulate
 	  (fun n ->
 	    let xn = Nameops.make_ident "x" (Some (n+1)) in
 	    let yn = Nameops.make_ident "y" (Some (n+1)) in
