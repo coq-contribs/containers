@@ -32,11 +32,13 @@ let iter3 a a' a'' f =
   done
 
 let print_ind_body fmt ibody =
-  let module D = Declarations in
     fprintf fmt "Inductive body : {\n";
-    fprintf fmt "\t name : %a\n" print_id ibody.D.mind_typename;
+    fprintf fmt "\t name : %a\n" print_id ibody.Declarations.mind_typename;
     fprintf fmt "\t constructors : \n";
-    iter3 ibody.D.mind_consnames ibody.D.mind_nf_lc ibody.D.mind_consnrealdecls
+    iter3
+      ibody.Declarations.mind_consnames
+      ibody.Declarations.mind_nf_lc
+      ibody.Declarations.mind_consnrealdecls
       (fun i id typ n -> fprintf fmt "\t #%d : %a [%d arguments] == %a\n"
 	 i print_id id n print_constr typ);
     fprintf fmt "}\n"
@@ -605,6 +607,7 @@ let generate_simple_ot gref =
 (* for recursive datatypes *)
 
 open Declarations
+open Declareops
 
 let print_ind (mind,index) =
   Printf.sprintf "(%s, %d)" (Names.string_of_mind mind) index
