@@ -1731,7 +1731,7 @@ Module SetAVL.
       (h' : lt s' s'') : lt s s''.
     Proof.
       unfold lt in *.
-      apply (list_StrictOrder_obligation_1 _ _
+      apply (OrderedTypeEx.list_StrictOrder_obligation_1 _ _
         (elements s) (elements s') (elements s'')); auto.
     Qed.
 
@@ -1739,7 +1739,7 @@ Module SetAVL.
       bst s -> bst s' -> lt s s' -> ~ Equal s s'.
     Proof.
       unfold lt in |- *; intros; intro.
-      apply (list_StrictOrder_obligation_2 _ _ (elements s) (elements s') H1).
+      apply (OrderedTypeEx.list_StrictOrder_obligation_2 _ _ (elements s) (elements s') H1).
       assert (Hs : sort _lt (elements s)) by auto.
       assert (Hs' : sort _lt (elements s')) by auto.
       set (S := SetList.Build_set Hs). set (S' := SetList.Build_set Hs').

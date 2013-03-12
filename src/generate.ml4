@@ -841,7 +841,7 @@ let generate_rec_ot gref =
   Command.do_mutual_inductive mutual_lt true;
   (* declare the comparison function *)
   let fexpr = rmake_cmp_def ind mask mind ibody in
-  Command.do_fixpoint [(fexpr, [])];
+  Command.do_fixpoint Decl_kinds.Global [(fexpr, [])];
   (* prove the Equivalence instance *)
   prove_Equivalence indconstr mind ibody;
   (* prove the StrictOrder instance *)
@@ -1422,7 +1422,7 @@ let mmake_cmp_def k ind masks mind =
 			   (fun i body -> make_block i body, [])
 			   mind.mind_packets)
 	in
-	Command.do_fixpoint defs
+	Command.do_fixpoint Decl_kinds.Global defs
 
 (* proving the [OrderedType] instance *)
 let mprove_compare_spec k ids mind =
