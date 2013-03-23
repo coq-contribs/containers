@@ -95,12 +95,11 @@ let eq_constr_i eqid cid carity =
   let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
   let cy = CApp (Loc.ghost, (None, mkIdentC cid), ybar) in
   CProdN (Loc.ghost,
-	  (prod_n_i [] carity) @ (Util.List.tabulate
+	  (prod_n_i [] carity) @ (Util.List.init carity
 				    (fun n ->
 				      let xn = Nameops.make_ident "x" (Some (n+1)) in
 				      let yn = Nameops.make_ident "y" (Some (n+1)) in
-				      [Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, mk_equiv xn yn)
-				    carity),
+				      [Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, mk_equiv xn yn)),
 	  (CApp (Loc.ghost, (None, mkIdentC eqid), [cx, None; cy, None])))
 let make_eq_mutual ind mind body =
   let id_t = body.Declarations.mind_typename in
@@ -135,12 +134,11 @@ let lexi_constr ltid cid carity =
 	let base = CProdN (Loc.ghost, [[Loc.ghost,Names.Anonymous],
 				       Default Decl_kinds.Explicit,
 				       mk_lt xn yn], goal) in
-	let c = CProdN (Loc.ghost, Util.List.tabulate
+	let c = CProdN (Loc.ghost, Util.List.init (n-1)
 	  (fun n ->
 	    let xn = Nameops.make_ident "x" (Some (n+1)) in
 	    let yn = Nameops.make_ident "y" (Some (n+1)) in
-	    [Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, mk_lt xn yn)
-	  (n-1), base) in
+	    [Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, mk_lt xn yn), base) in
 	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
 				      "_"^(string_of_int n)) in
 	  all_lexico_cases goal ((name, c)::acc) (n-1) in
