@@ -1164,10 +1164,10 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 	) [] ids_eq in
       TacAtom (Loc.ghost,
 	       TacExtend (Loc.ghost, "eauto",
-			  [in_gen (wit_opt rawwit_int_or_var) None;
-			   in_gen (wit_opt rawwit_int_or_var) None;
-			   in_gen Eauto.rawwit_auto_using lems;
-			   in_gen Eauto.rawwit_hintbases (Some [])]))
+			  [in_gen (rawwit (wit_opt wit_int_or_var)) None;
+			   in_gen (rawwit (wit_opt wit_int_or_var)) None;
+			   in_gen (rawwit Eauto.wit_auto_using) lems;
+			   in_gen (rawwit Eauto.wit_hintbases) (Some [])]))
   in
   let prove_eq_lt_and_gt () =
     let lemma_eq_lt i =
