@@ -30,7 +30,7 @@ let rec print_constr fmt c =
   | Var id -> fprintf fmt ("var %s") (Names.string_of_id id)
   | Meta _ -> fprintf fmt "meta"
   | Evar (i, constr_array) ->
-      fprintf fmt "Evar : %d %a" i (print_array f " " "") constr_array
+      fprintf fmt "Evar : %d %a" (Evar.repr i) (print_array f " " "") constr_array
   | Sort s ->
       (match s with
 	 | Prop Null -> fprintf fmt "sort(prop)"
