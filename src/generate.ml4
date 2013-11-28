@@ -54,7 +54,7 @@ let bin_cmp_t id_t =
   CProdN (Loc.ghost, [[(dl Names.Anonymous);(dl Names.Anonymous)],
 		       Default Decl_kinds.Explicit, mkIdentC id_t], ccomparison)
 
-let hole = CHole (Loc.ghost, None)
+let hole = CHole (Loc.ghost, None, None)
 
 (* à la v8.2... *)
 let declare_definition
