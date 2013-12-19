@@ -333,7 +333,7 @@ let prove_refl indconstr mind body =
     Lemmas.start_proof (add_suffix id_t "_eq_refl")
       property_kind goal (fun _ _ -> ());
     Pfedit.by refltactic;
-    Lemmas.save_named true
+    Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let prove_sym indconstr mind body =
   let id_t = body.Declarations.mind_typename in
@@ -354,7 +354,7 @@ let prove_sym indconstr mind body =
     Lemmas.start_proof (add_suffix id_t "_eq_sym")
       property_kind goal (fun _ _ -> ());
     Pfedit.by symtactic;
-    Lemmas.save_named true
+    Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let prove_trans indconstr mind body =
   let id_t = body.Declarations.mind_typename in
@@ -380,7 +380,7 @@ let prove_trans indconstr mind body =
     Lemmas.start_proof (add_suffix id_t "_eq_trans")
       property_kind goal (fun _ _ -> ());
     Pfedit.by transtactic;
-    Lemmas.save_named true
+    Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let prove_Equivalence indconstr mind body =
   prove_refl indconstr mind body;
@@ -445,11 +445,11 @@ let prove_lt_trans indconstr mind body =
       Lemmas.start_proof (add_suffix id_t "_eq_lt")
 	lemma_kind lemma_eq_lt (fun _ _ -> ());
       Pfedit.by solve_eq_lt;
-      Lemmas.save_named true;
+      Lemmas.save_proof (Vernacexpr.Proved(true,None));
       Lemmas.start_proof (add_suffix id_t "_eq_gt")
 	lemma_kind lemma_eq_gt (fun _ _ -> ());
       Pfedit.by solve_eq_gt;
-      Lemmas.save_named true
+      Lemmas.save_proof (Vernacexpr.Proved(true,None))
   in
   let goal =
     mkNamedProd x indconstr
@@ -470,7 +470,7 @@ let prove_lt_trans indconstr mind body =
   Lemmas.start_proof (add_suffix id_t "_lt_trans")
     property_kind goal (fun _ _ -> ());
   Pfedit.by transtactic;
-  Lemmas.save_named true
+  Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let prove_lt_irrefl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
@@ -499,7 +499,7 @@ let prove_lt_irrefl indconstr mind body =
     Lemmas.start_proof (add_suffix id_t "_lt_irrefl")
       property_kind goal (fun _ _ -> ());
     Pfedit.by irrefltactic;
-    Lemmas.save_named true
+    Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let build_strictorder_ref =
   Libnames.Qualid
@@ -551,7 +551,7 @@ let prove_t_compare_spec indconstr mind body =
   Lemmas.start_proof (add_suffix id_t "_compare_spec")
     property_kind goal (fun _ _ -> ());
   Pfedit.by spectactic;
-  Lemmas.save_named true
+  Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let build_ot_ref =
   Libnames.Qualid
@@ -945,7 +945,7 @@ let mprove_refl k ids ids_eq mind =
     for i = 1 to mind.mind_ntypes do
       Pfedit.by refltactic
     done;
-    Lemmas.save_named true
+    Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let mprove_sym k ids ids_eq mind =
   let x = Nameops.make_ident "x" None in
@@ -976,7 +976,7 @@ let mprove_sym k ids ids_eq mind =
     for i = 1 to mind.mind_ntypes do
       Pfedit.by symtactic
     done;
-    Lemmas.save_named true
+    Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let mprove_trans k ids ids_eq mind =
   let x = Nameops.make_ident "x" None in
@@ -1011,7 +1011,7 @@ let mprove_trans k ids ids_eq mind =
     for i = 1 to mind.mind_ntypes do
       Pfedit.by transtactic
     done;
-    Lemmas.save_named true
+    Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let mprove_Equivalence k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
@@ -1217,13 +1217,13 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
       for i = 1 to mind.mind_ntypes do
 	Pfedit.by eqlttactic;
       done;
-      Lemmas.save_named true;
+      Lemmas.save_proof (Vernacexpr.Proved(true,None));
     Lemmas.start_proof_com property_kind
       lemmas_eq_gt (fun _ _ -> ());
     for i = 1 to mind.mind_ntypes do
       Pfedit.by eqgttactic
     done;
-    Lemmas.save_named true
+    Lemmas.save_proof (Vernacexpr.Proved(true,None))
   in
   let goal i =
     CProdN (Loc.ghost,
@@ -1267,7 +1267,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   for i = 1 to mind.mind_ntypes do
     Pfedit.by transtactic
   done;
-  Lemmas.save_named true
+  Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let mprove_lt_irrefl k ids ids_eq ids_lt mind =
   let x = Nameops.make_ident "x" None in
@@ -1301,7 +1301,7 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
   for i = 1 to mind.mind_ntypes do
     Pfedit.by irrefltactic
   done;
-  Lemmas.save_named true
+  Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let mprove_StrictOrder k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
@@ -1466,7 +1466,7 @@ let mprove_compare_spec k ids mind =
   for i = 1 to mind.mind_ntypes do
     Pfedit.by comparespectactic
   done;
-  Lemmas.save_named true
+  Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
 let mprove_OrderedType k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
