@@ -82,11 +82,11 @@ COQSRCLIBS?=-I "$(COQLIB)kernel" -I "$(COQLIB)lib" \
   -I "$(COQLIB)interp" -I "$(COQLIB)printing" -I "$(COQLIB)intf" \
   -I "$(COQLIB)proofs" -I "$(COQLIB)tactics" -I "$(COQLIB)tools" \
   -I "$(COQLIB)toplevel" -I "$(COQLIB)grammar" \
-  -I $(COQLIB)/plugins/Derive \
   -I $(COQLIB)/plugins/btauto \
   -I $(COQLIB)/plugins/cc \
   -I $(COQLIB)/plugins/decl_mode \
   -I $(COQLIB)/plugins/extraction \
+  -I $(COQLIB)/plugins/field \
   -I $(COQLIB)/plugins/firstorder \
   -I $(COQLIB)/plugins/fourier \
   -I $(COQLIB)/plugins/funind \
@@ -94,6 +94,7 @@ COQSRCLIBS?=-I "$(COQLIB)kernel" -I "$(COQLIB)lib" \
   -I $(COQLIB)/plugins/nsatz \
   -I $(COQLIB)/plugins/omega \
   -I $(COQLIB)/plugins/quote \
+  -I $(COQLIB)/plugins/ring \
   -I $(COQLIB)/plugins/romega \
   -I $(COQLIB)/plugins/rtauto \
   -I $(COQLIB)/plugins/setoid_ring \
@@ -167,10 +168,10 @@ VFILES:=theories/SetConstructs.v\
 -include $(addsuffix .d,$(VFILES))
 .SECONDARY: $(addsuffix .d,$(VFILES))
 
-VO=vo
-VOFILES:=$(VFILES:.v=.$(VO))
+VOFILES:=$(VFILES:.v=.vo)
 VOFILES1=$(patsubst theories/%,%,$(filter theories/%,$(VOFILES)))
 GLOBFILES:=$(VFILES:.v=.glob)
+VIFILES:=$(VFILES:.v=.vi)
 GFILES:=$(VFILES:.v=.g)
 HTMLFILES:=$(VFILES:.v=.html)
 GHTMLFILES:=$(VFILES:.v=.g.html)
@@ -228,10 +229,8 @@ mlihtml: $(MLIFILES:.mli=.cmi)
 all-mli.tex: $(MLIFILES:.mli=.cmi)
 	$(OCAMLDOC) -latex -rectypes -o $@ -m A $(ZDEBUG) $(ZFLAGS) $(^:.cmi=.mli)
 
-quick:
-	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) all VO=vi
-checkproofs:
-	$(COQC) $(COQDEBUG) $(COQFLAGS) -schedule-vi-checking $(J) $(VOFILES:%.vo=%.vi)
+spec: $(VIFILES)
+
 gallina: $(GFILES)
 
 html: $(GLOBFILES) $(VFILES)
@@ -354,7 +353,7 @@ clean:
 	rm -f $(ALLCMOFILES) $(CMIFILES) $(CMAFILES)
 	rm -f $(ALLCMOFILES:.cmo=.cmx) $(CMXAFILES) $(CMXSFILES) $(ALLCMOFILES:.cmo=.o) $(CMXAFILES:.cmxa=.a)
 	rm -f $(addsuffix .d,$(MLFILES) $(MLIFILES) $(ML4FILES) $(MLLIBFILES) $(MLPACKFILES))
-	rm -f $(VOFILES) $(VOFILES:.vo=.vi) $(GFILES) $(VFILES:.v=.v.d) $(VFILES:=.beautified) $(VFILES:=.old)
+	rm -f $(VOFILES) $(VIFILES) $(GFILES) $(VFILES:.v=.v.d) $(VFILES:=.beautified) $(VFILES:=.old)
 	rm -f all.ps all-gal.ps all.pdf all-gal.pdf all.glob $(VFILES:.v=.glob) $(VFILES:.v=.tex) $(VFILES:.v=.g.tex) all-mli.tex
 	- rm -rf html mlihtml uninstall_me.sh
 	- rm -rf 
@@ -395,7 +394,7 @@ Makefile: Make
 	$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<
 
 %.ml4.d: %.ml4
-	$(COQDEP) $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+	$(COQDEP) -slash $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 %.cmo: %.ml
 	$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<
@@ -419,13 +418,13 @@ Makefile: Make
 	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^
 
 %.mllib.d: %.mllib
-	$(COQDEP) $(COQLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+	$(COQDEP) -slash $(COQLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 %.vo %.glob: %.v
 	$(COQC) $(COQDEBUG) $(COQFLAGS) $*
 
 %.vi: %.v
-	$(COQC) -quick $(COQDEBUG) $(COQFLAGS) $*
+	$(COQC) -i $(COQDEBUG) $(COQFLAGS) $*
 
 %.g: %.v
 	$(GALLINA) $<
@@ -443,7 +442,7 @@ Makefile: Make
 	$(COQDOC) $(COQDOCFLAGS)  -html -g $< -o $@
 
 %.v.d: %.v
-	$(COQDEP) $(COQLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+	$(COQDEP) -slash $(COQLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 %.v.beautified:
 	$(COQC) $(COQDEBUG) $(COQFLAGS) -beautify $*
