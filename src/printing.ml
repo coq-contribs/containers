@@ -48,11 +48,11 @@ let rec print_constr fmt c =
 	(string_of_name name) f typ f constr f constr'
   | App (constr, constr_array) ->
       fprintf fmt "%a @ (%a)" f constr (print_array f ", " "") constr_array
-  | Const const ->
+  | Const (const, _) ->
       fprintf fmt "constante %s" (Names.string_of_con const)
-  | Ind(mult_ind, i) ->
+  | Ind((mult_ind, i), _) ->
       fprintf fmt "Ind (%a, %d)" print_kn (Names.user_mind mult_ind) i
-  | Construct ((mult_ind, i), i')->
+  | Construct (((mult_ind, i), i'), _) ->
       fprintf fmt "Constructor ((%a, %d), %d)"
 	print_kn (Names.user_mind mult_ind) i i'
   | Case (case_info, constr, constr', constr_array) ->
@@ -74,8 +74,9 @@ let rec print_constr fmt c =
 	name_a
 	(print_array f ", " "") type_a
 	(print_array f ", " "") constr_a
+  | Proj (c, p) -> fprintf fmt "Proj (%s, %a)" (Names.string_of_con c) f p
 
 let print_ast constr_expr =
-  let constr =
+  let constr, _ =
     Constrintern.interp_constr Evd.empty (Global.env ()) constr_expr in
     fprintf std_formatter "%a" print_constr constr

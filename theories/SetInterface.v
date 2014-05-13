@@ -19,7 +19,7 @@ Section Equal.
   Definition Equal_pw (s s' : container) : Prop :=
     forall a : elt, In a s <-> In a s'.
   Program Definition Equal_pw_Equivalence : Equivalence Equal_pw :=
-    Build_Equivalence _ _ _ _ _.
+    Build_Equivalence _ _ _ _.
   Next Obligation.
     constructor; auto.
   Qed.

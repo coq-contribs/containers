@@ -64,7 +64,7 @@ Section StrictOrderProps.
   Property lt_not_gt : forall x y, x <<< y -> ~(x >>> y).
   Proof.
     intros; intro abs; refine (lt_not_eq _ _); shelve_unifiable.
-    apply transitivity with y; eauto. reflexivity.
+    transitivity y; eauto. reflexivity.
   Qed.
 End StrictOrderProps.
 Unset Implicit Arguments.

@@ -62,7 +62,7 @@ let declare_definition
     binder_list red_expr_opt constr_expr
     constr_expr_opt decl_hook =
   Command.do_definition
-  id (loc, def_obj_kind) binder_list red_expr_opt constr_expr
+  id (loc, false, def_obj_kind) binder_list red_expr_opt constr_expr
   constr_expr_opt decl_hook
 
 (* building the equality predicate *)
@@ -315,14 +315,14 @@ let load_tactic_args s lids =
 
 open Tacticals
 
-let property_kind = (Decl_kinds.Global, Decl_kinds.Proof Decl_kinds.Property)
-let lemma_kind = (Decl_kinds.Global, Decl_kinds.Proof Decl_kinds.Lemma)
+let property_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Property)
+let lemma_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Lemma)
 
 let prove_refl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
-  let ceq = Globnames.constr_of_reference
+  let ceq = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
   let goal =
     mkNamedProd x indconstr
@@ -331,7 +331,7 @@ let prove_refl indconstr mind body =
     load_tactic "rinductive_refl"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_refl")
-      property_kind goal (fun _ _ -> ());
+      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
     Pfedit.by refltactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -340,7 +340,7 @@ let prove_sym indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let ceq = Globnames.constr_of_reference
+  let ceq = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
   let goal =
     mkNamedProd x indconstr
@@ -352,7 +352,7 @@ let prove_sym indconstr mind body =
     load_tactic "rinductive_sym"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_sym")
-      property_kind goal (fun _ _ -> ());
+      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
     Pfedit.by symtactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -362,7 +362,7 @@ let prove_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let ceq = Globnames.constr_of_reference
+  let ceq = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
   let goal =
     mkNamedProd x indconstr
@@ -378,7 +378,7 @@ let prove_trans indconstr mind body =
     load_tactic "rinductive_trans"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_trans")
-      property_kind goal (fun _ _ -> ());
+      property_kind (goal, Univ.ContextSet.empty) (** FIXME *)  (fun _ _ -> ());
     Pfedit.by transtactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -409,9 +409,9 @@ let prove_lt_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let clt = Globnames.constr_of_reference
+  let clt = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Globnames.constr_of_reference
+  let ceq = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
   let prove_eq_lt_and_gt () =
     let id_eq_sym = add_suffix id_t "_eq_sym" in
@@ -443,11 +443,11 @@ let prove_lt_trans indconstr mind body =
       load_tactic_args "rinductive_eq_gt" [id_eq_trans]
     in
       Lemmas.start_proof (add_suffix id_t "_eq_lt")
-	lemma_kind lemma_eq_lt (fun _ _ -> ());
+	lemma_kind (lemma_eq_lt, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
       Pfedit.by solve_eq_lt;
       Lemmas.save_proof (Vernacexpr.Proved(true,None));
       Lemmas.start_proof (add_suffix id_t "_eq_gt")
-	lemma_kind lemma_eq_gt (fun _ _ -> ());
+	lemma_kind (lemma_eq_gt, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
       Pfedit.by solve_eq_gt;
       Lemmas.save_proof (Vernacexpr.Proved(true,None))
   in
@@ -468,7 +468,7 @@ let prove_lt_trans indconstr mind body =
   in
   prove_eq_lt_and_gt ();
   Lemmas.start_proof (add_suffix id_t "_lt_trans")
-    property_kind goal (fun _ _ -> ());
+    property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
   Pfedit.by transtactic;
   Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -478,11 +478,11 @@ let prove_lt_irrefl indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = Globnames.constr_of_reference
+  let clt = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Globnames.constr_of_reference
+  let ceq = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
-  let cfalse = Globnames.constr_of_reference
+  let cfalse = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl (Names.id_of_string "False")))) in
   let goal =
     mkNamedProd x indconstr
@@ -497,7 +497,7 @@ let prove_lt_irrefl indconstr mind body =
     load_tactic "rinductive_irrefl"
   in
     Lemmas.start_proof (add_suffix id_t "_lt_irrefl")
-      property_kind goal (fun _ _ -> ());
+      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
     Pfedit.by irrefltactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -530,13 +530,13 @@ let prove_t_compare_spec indconstr mind body =
   let id_cmp = add_suffix id_t "_cmp" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = Globnames.constr_of_reference
+  let clt = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Globnames.constr_of_reference
+  let ceq = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_eq))) in
-  let ccmp = Globnames.constr_of_reference
+  let ccmp = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id_cmp))) in
-  let ccomp_spec = Globnames.constr_of_reference
+  let ccomp_spec = Universes.constr_of_reference
     (Nametab.global (Libnames.Ident
 		       (dl (Names.id_of_string "compare_spec")))) in
   let goal =
@@ -549,7 +549,7 @@ let prove_t_compare_spec indconstr mind body =
     load_tactic_args "rsolve_compare_spec" [add_suffix id_t "_eq_sym"]
   in
   Lemmas.start_proof (add_suffix id_t "_compare_spec")
-    property_kind goal (fun _ _ -> ());
+    property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
   Pfedit.by spectactic;
   Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -576,11 +576,11 @@ let prove_OrderedType indconstr mind body =
     
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
-  let indconstr = Globnames.constr_of_global gindref in
+  let indconstr = Universes.constr_of_global gindref in
   (* retrieve the inductive type *)
-  let (ind, _) =
+  let (ind, ctx) =
     Inductive.find_inductive (Global.env ()) indconstr in
-  let (mind, ibody) = Global.lookup_inductive ind in
+  let (mind, ibody) = Global.lookup_inductive (ind, ctx) in
   fprintf std_formatter "%a" print_ind_body ibody;
   (* define the equality predicate *)
   let mutual_eq = make_eq_mutual ind mind ibody in
@@ -812,7 +812,7 @@ let make_mask body =
 
 let generate_rec_ot gref =
   let gindref = Nametab.global gref in
-  let indconstr = Globnames.constr_of_global gindref in
+  let indconstr = Universes.constr_of_global gindref in
     (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
@@ -850,7 +850,7 @@ let generate_rec_ot gref =
 open Declarations
 
 let c_of_id id =
-  Globnames.constr_of_reference
+  Universes.constr_of_reference
     (Nametab.global (Libnames.Ident (dl id)))
 
 exception FoundEqual of int
@@ -1493,7 +1493,7 @@ let generate_mutual_ot gref =
   Coqlib.check_required_library ["Coq";"Classes";"Equivalence"];
   Coqlib.check_required_library ["Containers";"Tactics"];
   let gindref = Nametab.global gref in
-  let indconstr = Globnames.constr_of_global gindref in
+  let indconstr = Universes.constr_of_global gindref in
   (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
@@ -1535,7 +1535,7 @@ let generate_ot = generate_mutual_ot
 
 let generate_scheme gref =
   let gindref = Nametab.global gref in
-  let indconstr = Globnames.constr_of_global gindref in
+  let indconstr = Universes.constr_of_global gindref in
     (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
