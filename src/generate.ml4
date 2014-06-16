@@ -318,6 +318,8 @@ open Tacticals
 let property_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Property)
 let lemma_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Lemma)
 
+let dummy_hook = Lemmas.mk_hook (fun _ _ -> ())
+
 let prove_refl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
@@ -331,7 +333,7 @@ let prove_refl indconstr mind body =
     load_tactic "rinductive_refl"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_refl")
-      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
+      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
     Pfedit.by refltactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -352,7 +354,7 @@ let prove_sym indconstr mind body =
     load_tactic "rinductive_sym"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_sym")
-      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
+      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
     Pfedit.by symtactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -378,7 +380,7 @@ let prove_trans indconstr mind body =
     load_tactic "rinductive_trans"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_trans")
-      property_kind (goal, Univ.ContextSet.empty) (** FIXME *)  (fun _ _ -> ());
+      property_kind (goal, Univ.ContextSet.empty) (** FIXME *)  dummy_hook;
     Pfedit.by transtactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -398,7 +400,7 @@ let prove_Equivalence indconstr mind body =
   in
     declare_definition id_equiv
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      [] None equiv None (fun _ _ -> ())(* ; *)
+      [] None equiv None dummy_hook (* ; *)
 (*     Classes.declare_instance false (dl id_equiv) *)
 
 (* proving that the ordering is a [StrictOrder] *)
@@ -443,11 +445,11 @@ let prove_lt_trans indconstr mind body =
       load_tactic_args "rinductive_eq_gt" [id_eq_trans]
     in
       Lemmas.start_proof (add_suffix id_t "_eq_lt")
-	lemma_kind (lemma_eq_lt, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
+	lemma_kind (lemma_eq_lt, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
       Pfedit.by solve_eq_lt;
       Lemmas.save_proof (Vernacexpr.Proved(true,None));
       Lemmas.start_proof (add_suffix id_t "_eq_gt")
-	lemma_kind (lemma_eq_gt, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
+	lemma_kind (lemma_eq_gt, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
       Pfedit.by solve_eq_gt;
       Lemmas.save_proof (Vernacexpr.Proved(true,None))
   in
@@ -468,7 +470,7 @@ let prove_lt_trans indconstr mind body =
   in
   prove_eq_lt_and_gt ();
   Lemmas.start_proof (add_suffix id_t "_lt_trans")
-    property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
+    property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
   Pfedit.by transtactic;
   Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -497,7 +499,7 @@ let prove_lt_irrefl indconstr mind body =
     load_tactic "rinductive_irrefl"
   in
     Lemmas.start_proof (add_suffix id_t "_lt_irrefl")
-      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
+      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
     Pfedit.by irrefltactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -519,7 +521,7 @@ let prove_StrictOrder indconstr mind body =
   in
     declare_definition id_strict
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      [] None strict None (fun _ _ -> ())
+      [] None strict None dummy_hook
 
 
 (* proving the [OrderedType] instance *)
@@ -549,7 +551,7 @@ let prove_t_compare_spec indconstr mind body =
     load_tactic_args "rsolve_compare_spec" [add_suffix id_t "_eq_sym"]
   in
   Lemmas.start_proof (add_suffix id_t "_compare_spec")
-    property_kind (goal, Univ.ContextSet.empty) (** FIXME *) (fun _ _ -> ());
+    property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
   Pfedit.by spectactic;
   Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -571,8 +573,8 @@ let prove_OrderedType indconstr mind body =
   in
     declare_definition id_ot
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-    [] None ot None (fun loc gr ->
-		     Typeclasses.declare_instance None (loc=Decl_kinds.Local) gr)
+    [] None ot None (Lemmas.mk_hook (fun loc gr ->
+		     Typeclasses.declare_instance None (loc=Decl_kinds.Local) gr))
     
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
@@ -580,21 +582,21 @@ let generate_simple_ot gref =
   (* retrieve the inductive type *)
   let (ind, ctx) =
     Inductive.find_inductive (Global.env ()) indconstr in
-  let (mind, ibody) = Global.lookup_inductive (ind, ctx) in
+  let (mind, ibody) = Global.lookup_inductive (fst ind) in
   fprintf std_formatter "%a" print_ind_body ibody;
   (* define the equality predicate *)
   let mutual_eq = make_eq_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  Command.do_mutual_inductive mutual_eq true;
+  Command.do_mutual_inductive mutual_eq false false true;
   (* define the strict ordering predicate *)
   let mutual_lt = make_lt_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  Command.do_mutual_inductive mutual_lt true;
+  Command.do_mutual_inductive mutual_lt false false true;
   (* declare the comparison function *)
   let id_cmp, ttt = make_cmp_def ind mind ibody in
     declare_definition id_cmp
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      [] None ttt None (fun _ _ -> ());
+      [] None ttt None dummy_hook;
   (* prove the Equivalence instance *)
   prove_Equivalence indconstr mind ibody;
   (* prove the StrictOrder instance *)
@@ -816,7 +818,7 @@ let generate_rec_ot gref =
     (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
-  let (mind, ibody) = Global.lookup_inductive ind in
+  let (mind, ibody) = Global.lookup_inductive (fst ind) in
     fprintf std_formatter "%a" print_ind_body ibody;
   let pptree = Rtree.pp_tree print_recarg ibody.Declarations.mind_recargs in
     if_verbose Pp.msgnl pptree;
@@ -832,14 +834,14 @@ let generate_rec_ot gref =
   (* define the equality predicate *)
   let mutual_eq = rmake_eq_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  Command.do_mutual_inductive mutual_eq true;
+  Command.do_mutual_inductive mutual_eq false false true;
   (* define the strict ordering predicate *)
   let mutual_lt = rmake_lt_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  Command.do_mutual_inductive mutual_lt true;
+  Command.do_mutual_inductive mutual_lt false false true;
   (* declare the comparison function *)
   let fexpr = rmake_cmp_def ind mask mind ibody in
-  Command.do_fixpoint Decl_kinds.Global [(fexpr, [])];
+  Command.do_fixpoint Decl_kinds.Global false [(fexpr, [])];
   (* prove the Equivalence instance *)
   prove_Equivalence indconstr mind ibody;
   (* prove the StrictOrder instance *)
@@ -941,7 +943,7 @@ let mprove_refl k ids ids_eq mind =
 		   | Mutual -> "minductive_refl")
   in
     Lemmas.start_proof_com property_kind
-      goals (fun _ _ -> ());
+      goals dummy_hook;
     for i = 1 to mind.mind_ntypes do
       Pfedit.by refltactic
     done;
@@ -972,7 +974,7 @@ let mprove_sym k ids ids_eq mind =
 		   | Mutual -> "minductive_sym")
   in
     Lemmas.start_proof_com property_kind
-      goals (fun _ _ -> ());
+      goals dummy_hook;
     for i = 1 to mind.mind_ntypes do
       Pfedit.by symtactic
     done;
@@ -1007,7 +1009,7 @@ let mprove_trans k ids ids_eq mind =
 		   | Mutual -> "minductive_trans")
   in
     Lemmas.start_proof_com property_kind
-      goals (fun _ _ -> ());
+      goals dummy_hook;
     for i = 1 to mind.mind_ntypes do
       Pfedit.by transtactic
     done;
@@ -1031,7 +1033,7 @@ let mprove_Equivalence k mind =
     Array.iteri (fun i id_equiv ->
 		   declare_definition id_equiv
 		     (Decl_kinds.Global, false, Decl_kinds.Definition)
-		     [] None (equiv i) None (fun _ _ -> ()))
+		     [] None (equiv i) None dummy_hook)
       ids_equiv
 
 let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
@@ -1213,13 +1215,13 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 			  [apply_tactic "msolve_eq_gt" [solve_arg]])
     in
     Lemmas.start_proof_com property_kind
-      lemmas_eq_lt (fun _ _ -> ());
+      lemmas_eq_lt dummy_hook;
       for i = 1 to mind.mind_ntypes do
 	Pfedit.by eqlttactic;
       done;
       Lemmas.save_proof (Vernacexpr.Proved(true,None));
     Lemmas.start_proof_com property_kind
-      lemmas_eq_gt (fun _ _ -> ());
+      lemmas_eq_gt dummy_hook;
     for i = 1 to mind.mind_ntypes do
       Pfedit.by eqgttactic
     done;
@@ -1263,7 +1265,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   in
   if k = Simple then () else prove_eq_lt_and_gt ();
   Lemmas.start_proof_com property_kind
-    goals (fun _ _ -> ());
+    goals dummy_hook;
   for i = 1 to mind.mind_ntypes do
     Pfedit.by transtactic
   done;
@@ -1297,7 +1299,7 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
 		 else "minductive_irrefl")
   in
   Lemmas.start_proof_com property_kind
-    goals (fun _ _ -> ());
+    goals dummy_hook;
   for i = 1 to mind.mind_ntypes do
     Pfedit.by irrefltactic
   done;
@@ -1322,7 +1324,7 @@ let mprove_StrictOrder k mind =
   Array.iteri (fun i id_order ->
 		 declare_definition id_order
 		   (Decl_kinds.Global, false, Decl_kinds.Definition)
-		   [] None (strict i) None (fun _ _ -> ()))
+		   [] None (strict i) None dummy_hook)
     ids_order
 
 let mmk_cmp_if ids_cmp x y mask =
@@ -1414,14 +1416,14 @@ let mmake_cmp_def k ind masks mind =
 	in
 	  declare_definition ids_cmp.(0)
 	    (Decl_kinds.Global, false, Decl_kinds.Definition)
-	    [] None def None (fun _ _ -> ())
+	    [] None def None dummy_hook
     | Recursive | Mutual ->
 	let defs =
 	  Array.to_list (Array.mapi
 			   (fun i body -> make_block i body, [])
 			   mind.mind_packets)
 	in
-	Command.do_fixpoint Decl_kinds.Global defs
+	Command.do_fixpoint Decl_kinds.Global false defs
 
 (* proving the [OrderedType] instance *)
 let mprove_compare_spec k ids mind =
@@ -1462,7 +1464,7 @@ let mprove_compare_spec k ids mind =
 	Tacinterp.interp (apply_tactic "msolve_compare_spec" [using_sym])
   in
   Lemmas.start_proof_com property_kind
-    goals (fun _ _ -> ());
+    goals dummy_hook;
   for i = 1 to mind.mind_ntypes do
     Pfedit.by comparespectactic
   done;
@@ -1484,8 +1486,8 @@ let mprove_OrderedType k mind =
     in
       declare_definition id_ot
 	(Decl_kinds.Global, false, Decl_kinds.Definition)
-	[] None ot None (fun _ gr -> 
-			 Typeclasses.declare_instance None false gr)
+	[] None ot None (Lemmas.mk_hook (fun _ gr -> 
+			 Typeclasses.declare_instance None false gr))
   in
   Array.iteri prove_ot mind.mind_packets
 
@@ -1497,7 +1499,7 @@ let generate_mutual_ot gref =
   (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
-  let (mind, _) = Global.lookup_inductive ind in
+  let (mind, _) = Global.lookup_inductive (fst ind) in
   let masks = make_masks mind in
   Array.iteri (fun i mask ->
 		 fprintf std_formatter "Mask %d :\n" i;
@@ -1518,12 +1520,12 @@ let generate_mutual_ot gref =
   if_verbose Pp.msgnl (str "Inductive kind : " ++ pr_kind kind);
   (* define the equality predicate *)
   let mutual_eq = mmake_eq_mutual ind masks mind in
-  Command.do_mutual_inductive mutual_eq true;
+  Command.do_mutual_inductive mutual_eq false false true;
   (* prove the Equivalence instance *)
   mprove_Equivalence kind mind;
   (* define the strict ordering predicate *)
   let mutual_lt = mmake_lt_mutual ind masks mind in
-  Command.do_mutual_inductive mutual_lt true;
+  Command.do_mutual_inductive mutual_lt false false true;
   (* prove the StrictOrder instance *)
   mprove_StrictOrder kind mind;
   (* define the comparison function *)
@@ -1539,7 +1541,7 @@ let generate_scheme gref =
     (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
-  let (mind, _) = Global.lookup_inductive ind in
+  let (mind, _) = Global.lookup_inductive (fst ind) in
   let rec lnames acc = function
     | 0 -> acc
     | n ->
