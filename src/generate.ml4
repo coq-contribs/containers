@@ -320,6 +320,12 @@ let lemma_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Lemma)
 
 let dummy_hook = Lemmas.mk_hook (fun _ _ -> ())
 
+let get_context ty = 
+  let env = Global.env () in
+  let sigma = Evd.from_env env in
+  let sigma, _ty = Typing.e_type_of env sigma ty in
+    Evd.evar_universe_context sigma
+
 let prove_refl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
@@ -333,7 +339,7 @@ let prove_refl indconstr mind body =
     load_tactic "rinductive_refl"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_refl")
-      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
+      property_kind (get_context goal) goal dummy_hook;
     Pfedit.by refltactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -354,7 +360,7 @@ let prove_sym indconstr mind body =
     load_tactic "rinductive_sym"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_sym")
-      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
+      property_kind (get_context goal) goal dummy_hook;
     Pfedit.by symtactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -380,7 +386,7 @@ let prove_trans indconstr mind body =
     load_tactic "rinductive_trans"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_trans")
-      property_kind (goal, Univ.ContextSet.empty) (** FIXME *)  dummy_hook;
+      property_kind (get_context goal) goal  dummy_hook;
     Pfedit.by transtactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -445,11 +451,11 @@ let prove_lt_trans indconstr mind body =
       load_tactic_args "rinductive_eq_gt" [id_eq_trans]
     in
       Lemmas.start_proof (add_suffix id_t "_eq_lt")
-	lemma_kind (lemma_eq_lt, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
+	lemma_kind (get_context lemma_eq_lt) lemma_eq_lt dummy_hook;
       Pfedit.by solve_eq_lt;
       Lemmas.save_proof (Vernacexpr.Proved(true,None));
       Lemmas.start_proof (add_suffix id_t "_eq_gt")
-	lemma_kind (lemma_eq_gt, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
+	lemma_kind (get_context lemma_eq_gt) lemma_eq_gt dummy_hook;
       Pfedit.by solve_eq_gt;
       Lemmas.save_proof (Vernacexpr.Proved(true,None))
   in
@@ -470,7 +476,7 @@ let prove_lt_trans indconstr mind body =
   in
   prove_eq_lt_and_gt ();
   Lemmas.start_proof (add_suffix id_t "_lt_trans")
-    property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
+    property_kind (get_context goal) goal dummy_hook;
   Pfedit.by transtactic;
   Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -499,7 +505,7 @@ let prove_lt_irrefl indconstr mind body =
     load_tactic "rinductive_irrefl"
   in
     Lemmas.start_proof (add_suffix id_t "_lt_irrefl")
-      property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
+      property_kind (get_context goal) goal dummy_hook;
     Pfedit.by irrefltactic;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
@@ -551,7 +557,7 @@ let prove_t_compare_spec indconstr mind body =
     load_tactic_args "rsolve_compare_spec" [add_suffix id_t "_eq_sym"]
   in
   Lemmas.start_proof (add_suffix id_t "_compare_spec")
-    property_kind (goal, Univ.ContextSet.empty) (** FIXME *) dummy_hook;
+    property_kind (get_context goal) goal dummy_hook;
   Pfedit.by spectactic;
   Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
