@@ -58,7 +58,7 @@ Lemma fill__iff :
 Proof.
   induction n; intros s k; split; simpl; intro H.
   right; assumption.
-  destruct H; auto; apply False_rec; omega.
+  destruct H; auto; apply False_rec; Omega.omega.
   simpl in H; rewrite IHn in H; rewrite add_iff in H.
   decompose [or] H.
   left; auto.
@@ -67,7 +67,7 @@ Proof.
   simpl; rewrite IHn; destruct H.
   inversion H; subst.
   right; apply add_1; reflexivity.
-  left; omega.
+  left; Omega.omega.
   right; apply add_2; auto.
 Qed.
 Theorem fill2_iff : forall n k, k \In fill2 n <-> k < n.

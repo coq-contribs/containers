@@ -32,7 +32,7 @@ Lemma fill__iff :
 Proof.
   induction n; intros s k k'; split; simpl; intro H.
   right; assumption.
-  destruct H; auto; apply False_rec; omega.
+  destruct H; auto; apply False_rec; Omega.omega.
   simpl in H; rewrite IHn in H; destruct H.
   left; intuition.
   destruct (eq_dec k n). compute in H0; subst.
