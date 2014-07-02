@@ -46,11 +46,12 @@ TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
 #                        #
 ##########################
 
-OCAMLLIBS?=
-COQLIBS?= -R theories Containers\
-  -R src Containers.Plugin
-COQDOCLIBS?=-R theories Containers\
-  -R src Containers.Plugin
+OCAMLLIBS?=-I src
+COQLIBS?=\
+  -R theories Containers\
+  -I src
+COQDOCLIBS?=\
+  -R theories Containers
 
 ##########################
 #                        #
@@ -82,23 +83,23 @@ COQSRCLIBS?=-I "$(COQLIB)kernel" -I "$(COQLIB)lib" \
   -I "$(COQLIB)interp" -I "$(COQLIB)printing" -I "$(COQLIB)intf" \
   -I "$(COQLIB)proofs" -I "$(COQLIB)tactics" -I "$(COQLIB)tools" \
   -I "$(COQLIB)toplevel" -I "$(COQLIB)stm" -I "$(COQLIB)grammar" \
-    -I "$(COQLIB)/plugins/Derive" \
-    -I "$(COQLIB)/plugins/btauto" \
-    -I "$(COQLIB)/plugins/cc" \
-    -I "$(COQLIB)/plugins/decl_mode" \
-    -I "$(COQLIB)/plugins/extraction" \
-    -I "$(COQLIB)/plugins/firstorder" \
-    -I "$(COQLIB)/plugins/fourier" \
-    -I "$(COQLIB)/plugins/funind" \
-    -I "$(COQLIB)/plugins/micromega" \
-    -I "$(COQLIB)/plugins/nsatz" \
-    -I "$(COQLIB)/plugins/omega" \
-    -I "$(COQLIB)/plugins/quote" \
-    -I "$(COQLIB)/plugins/romega" \
-    -I "$(COQLIB)/plugins/rtauto" \
-    -I "$(COQLIB)/plugins/setoid_ring" \
-    -I "$(COQLIB)/plugins/syntax" \
-    -I "$(COQLIB)/plugins/xml"
+  -I "$(COQLIB)/plugins/Derive" \
+  -I "$(COQLIB)/plugins/btauto" \
+  -I "$(COQLIB)/plugins/cc" \
+  -I "$(COQLIB)/plugins/decl_mode" \
+  -I "$(COQLIB)/plugins/extraction" \
+  -I "$(COQLIB)/plugins/firstorder" \
+  -I "$(COQLIB)/plugins/fourier" \
+  -I "$(COQLIB)/plugins/funind" \
+  -I "$(COQLIB)/plugins/micromega" \
+  -I "$(COQLIB)/plugins/nsatz" \
+  -I "$(COQLIB)/plugins/omega" \
+  -I "$(COQLIB)/plugins/quote" \
+  -I "$(COQLIB)/plugins/romega" \
+  -I "$(COQLIB)/plugins/rtauto" \
+  -I "$(COQLIB)/plugins/setoid_ring" \
+  -I "$(COQLIB)/plugins/syntax" \
+  -I "$(COQLIB)/plugins/xml"
 ZFLAGS=$(OCAMLLIBS) $(COQSRCLIBS) -I $(CAMLP4LIB)
 
 CAMLC?=$(OCAMLC) -c -rectypes
@@ -197,16 +198,16 @@ MLIFILES:=src/printing.mli
 
 ALLCMOFILES:=$(ML4FILES:.ml4=.cmo) $(MLFILES:.ml=.cmo)
 CMOFILES=$(filter-out $(addsuffix .cmo,$(foreach lib,$(MLLIBFILES:.mllib=_MLLIB_DEPENDENCIES) $(MLPACKFILES:.mlpack=_MLPACK_DEPENDENCIES),$($(lib)))),$(ALLCMOFILES))
-CMOFILES2=$(patsubst src/%,%,$(filter src/%,$(CMOFILES)))
+CMOFILESINC=$(filter $(wildcard src/*),$(CMOFILES)) 
 CMXFILES=$(CMOFILES:.cmo=.cmx)
 OFILES=$(CMXFILES:.cmx=.o)
 CMAFILES:=$(MLLIBFILES:.mllib=.cma)
-CMAFILES2=$(patsubst src/%,%,$(filter src/%,$(CMAFILES)))
+CMAFILESINC=$(filter $(wildcard src/*),$(CMAFILES)) 
 CMXAFILES:=$(CMAFILES:.cma=.cmxa)
 CMIFILES=$(sort $(ALLCMOFILES:.cmo=.cmi) $(MLIFILES:.mli=.cmi))
-CMIFILES2=$(patsubst src/%,%,$(filter src/%,$(CMIFILES)))
+CMIFILESINC=$(filter $(wildcard src/*),$(CMIFILES)) 
 CMXSFILES=$(CMXFILES:.cmx=.cmxs) $(CMXAFILES:.cmxa=.cmxs)
-CMXSFILES2=$(patsubst src/%,%,$(filter src/%,$(CMXSFILES)))
+CMXSFILESINC=$(filter $(wildcard src/*),$(CMXSFILES)) 
 ifeq '$(HASNATDYNLINK)' 'true'
 HASNATDYNLINK_OR_EMPTY := yes
 else
@@ -310,19 +311,18 @@ userinstall:
 	+$(MAKE) USERINSTALL=true install
 
 install-natdynlink:
-	cd "src" && for i in $(CMXSFILES2); do \
-	 install -d "`dirname "$(DSTROOT)"$(COQLIBINSTALL)/Containers/Plugin/$$i`"; \
-	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Containers/Plugin/$$i; \
+	install -d "$(DSTROOT)"$(COQLIBINSTALL)/Containers; \
+	for i in $(CMXSFILESINC); do \
+	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Containers/`basename $$i`; \
 	done
 
 install:$(if $(HASNATDYNLINK_OR_EMPTY),install-natdynlink)
-	cd "src" && for i in $(CMAFILES2) $(CMIFILES2) $(CMOFILES2); do \
-	 install -d "`dirname "$(DSTROOT)"$(COQLIBINSTALL)/Containers/Plugin/$$i`"; \
-	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Containers/Plugin/$$i; \
-	done
 	cd "theories" && for i in $(VOFILES1); do \
 	 install -d "`dirname "$(DSTROOT)"$(COQLIBINSTALL)/Containers/$$i`"; \
 	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Containers/$$i; \
+	done
+	for i in $(CMAFILESINC) $(CMIFILESINC) $(CMOFILESINC); do \
+	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Containers/`basename $$i`; \
 	done
 
 install-doc:
@@ -337,10 +337,8 @@ install-doc:
 
 uninstall_me.sh:
 	echo '#!/bin/sh' > $@ 
-	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Containers/Plugin && rm -f $(CMXSFILES2) && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Containers/Plugin" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
-	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Containers && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Containers" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
-	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Containers/Plugin && rm -f $(CMAFILES2) $(CMIFILES2) $(CMOFILES2) && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Containers/Plugin" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
-	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Containers && rm -f $(VOFILES1) && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Containers" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
+	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Containers && \\\nfor i in $(CMXSFILESINC); do rm -f "`basename "$$i"`"; done && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Containers" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
+	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Containers && rm -f $(VOFILES1) && \\\nfor i in $(CMAFILESINC) $(CMIFILESINC) $(CMOFILESINC); do rm -f "`basename "$$i"`"; done && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Containers" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
 	printf 'cd "$${DSTROOT}"$(COQDOCINSTALL)/Containers \\\n' >> "$@"
 	printf '&& rm -f $(shell find "html" -maxdepth 1 -and -type f -print)\n' >> "$@"
 	printf 'cd "$${DSTROOT}"$(COQDOCINSTALL) && find Containers/html -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
@@ -397,7 +395,7 @@ Makefile: Make
 	$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<
 
 %.ml4.d: %.ml4
-	$(COQDEP) $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+	$(COQDEP) $(OCAMLLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 %.cmo: %.ml
 	$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<
@@ -421,7 +419,7 @@ Makefile: Make
 	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^
 
 %.mllib.d: %.mllib
-	$(COQDEP) $(COQLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+	$(COQDEP) $(OCAMLLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 %.vo %.glob: %.v
 	$(COQC) $(COQDEBUG) $(COQFLAGS) $*

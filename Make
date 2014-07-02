@@ -1,6 +1,6 @@
--R src Containers.Plugin
+-I src
 -R theories Containers
--custom "
+-extra "" "" "
 #the following is inserted verbatim
 
 install-plugin:
@@ -19,7 +19,7 @@ clean-test:
 clean: clean-test
 
 #end verbatim
-" "" ""
+"
 
 CONTAINERS_PLUGIN = "src/containers_plugin.cma"
 CONTAINERS_PLUGINOPT = "src/containers_plugin.cmxs"

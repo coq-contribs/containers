@@ -1587,6 +1587,8 @@ let print_paths gref =
 
 (* Syntax extensions *)
 
+DECLARE PLUGIN "containers_plugin"
+
 (* The 3 next commands are for debug *)
 VERNAC COMMAND EXTEND GenerateSimpleOrderedType CLASSIFIED AS SIDEFF
  ["Generate" "Simple" "OrderedType" global(indref)] ->
