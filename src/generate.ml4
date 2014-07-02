@@ -1021,6 +1021,8 @@ let mprove_trans k ids ids_eq mind =
     done;
     Lemmas.save_proof (Vernacexpr.Proved(true,None))
 
+let mkARefC id = None, Libnames.Ident (Loc.ghost, id), None
+
 let mprove_Equivalence k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
   let ids_eq = Array.map (fun id_t -> add_suffix id_t "_eq") ids in
@@ -1029,12 +1031,12 @@ let mprove_Equivalence k mind =
     mprove_sym k ids ids_eq mind;
     mprove_trans k ids ids_eq mind;
   let equiv i =
-    CApp (Loc.ghost,
-	  (None, mkIdentC (Names.id_of_string "Build_Equivalence")),
-	  [hole, None; hole, None;
-	   mkIdentC (add_suffix ids.(i) "_eq_refl"), None;
-	   mkIdentC (add_suffix ids.(i) "_eq_sym"), None;
-	   mkIdentC (add_suffix ids.(i) "_eq_trans"), None])
+    CAppExpl (Loc.ghost,
+	  (mkARefC (Names.id_of_string "Build_Equivalence")),
+	  [hole; hole;
+	   mkIdentC (add_suffix ids.(i) "_eq_refl");
+	   mkIdentC (add_suffix ids.(i) "_eq_sym");
+	   mkIdentC (add_suffix ids.(i) "_eq_trans")])
   in
     Array.iteri (fun i id_equiv ->
 		   declare_definition id_equiv
@@ -1320,12 +1322,12 @@ let mprove_StrictOrder k mind =
   mprove_lt_irrefl k ids ids_eq ids_lt mind;
   mprove_lt_trans k ids ids_eq ids_lt mind;
   let strict i =
-    CApp (Loc.ghost,
-	  (None, mkRefC build_strictorder_ref),
-	  [hole, None; hole, None; hole, None;
-	   mkIdentC ids_equiv.(i), None;
-	   mkIdentC (add_suffix ids_lt.(i) "_trans"), None;
-	   mkIdentC (add_suffix ids_lt.(i) "_irrefl"), None])
+    CAppExpl (Loc.ghost,
+	  (None, build_strictorder_ref, None),
+	  [hole; hole; hole;
+	   mkIdentC ids_equiv.(i);
+	   mkIdentC (add_suffix ids_lt.(i) "_trans");
+	   mkIdentC (add_suffix ids_lt.(i) "_irrefl")])
   in
   Array.iteri (fun i id_order ->
 		 declare_definition id_order
@@ -1482,13 +1484,13 @@ let mprove_OrderedType k mind =
   let prove_ot i body =
     let id_ot = add_suffix ids.(i) "_OrderedType" in
     let ot =
-      CApp (Loc.ghost,
-	    (None, mkRefC build_ot_ref),
-	    [hole, None; hole, None; hole, None;
-	     mkIdentC (add_suffix ids.(i) "_eq_Equivalence"), None;
-	     mkIdentC (add_suffix ids.(i) "_lt_StrictOrder"), None;
-	     hole, None;
-	     mkIdentC (add_suffix ids.(i) "_compare_spec"), None])
+      CAppExpl (Loc.ghost,
+	    (None, build_ot_ref, None),
+	    [hole; hole; hole;
+	     mkIdentC (add_suffix ids.(i) "_eq_Equivalence");
+	     mkIdentC (add_suffix ids.(i) "_lt_StrictOrder");
+	     hole;
+	     mkIdentC (add_suffix ids.(i) "_compare_spec")])
     in
       declare_definition id_ot
 	(Decl_kinds.Global, false, Decl_kinds.Definition)
