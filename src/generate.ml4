@@ -1166,6 +1166,10 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   let z = Nameops.make_ident "z" None in
   let clt i = mkIdentC ids_lt.(i) in
   let ceq i = mkIdentC ids_eq.(i) in
+  let eauto = {
+    mltac_plugin = "eauto";
+    mltac_tactic = "eauto";
+  } in
   let solve_arg : raw_tactic_expr =
     let lems =
       Array.fold_left
@@ -1174,7 +1178,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 	     ((),mkIdentC (add_suffix id_eq "_trans"))::acc
 	) [] ids_eq in
       TacAtom (Loc.ghost,
-	       TacExtend (Loc.ghost, "eauto",
+	       TacExtend (Loc.ghost, eauto,
 			  [in_gen (rawwit (wit_opt wit_int_or_var)) None;
 			   in_gen (rawwit (wit_opt wit_int_or_var)) None;
 			   in_gen (rawwit Eauto.wit_auto_using) lems;
