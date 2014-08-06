@@ -1134,8 +1134,8 @@ let seq_eapply lids : raw_tactic_expr =
   let apply id =
     TacAtom (Loc.ghost,
 	     TacApply (true, false,
-		       [(mkIdentC id,
-			 Misctypes.ImplicitBindings [mkIdentC b])],
+		       [(None, (mkIdentC id,
+			 Misctypes.ImplicitBindings [mkIdentC b]))],
 		       None))
   in
     TacFun ([Some b], TacFirst (List.map apply lids))
@@ -1146,13 +1146,13 @@ let seq_eapply_sym lids lsyms : raw_tactic_expr =
     TacThens(
       TacAtom (Loc.ghost,
 	       TacApply (true, false,
-			 [(mkIdentC id,
-			   Misctypes.ImplicitBindings [mkIdentC b])],
+			 [(None, (mkIdentC id,
+			   Misctypes.ImplicitBindings [mkIdentC b]))],
 			 None)),
       [
 	TacAtom (Loc.ghost,
 		 TacApply (true, false,
-			   [(mkIdentC idsym, Misctypes.NoBindings)],
+			   [(None, (mkIdentC idsym, Misctypes.NoBindings))],
 			   None));
 	TacId []
       ])
