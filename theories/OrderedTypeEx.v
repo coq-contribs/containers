@@ -280,7 +280,7 @@ Program Instance prod_UsualStrictOrder
   StrictOrder (@prod_lt A B (@Logic.eq _) _lt _lt) (@Logic.eq _).
 Next Obligation. (* transitivity *)
   do 4 intro; inversion_clear 0; intro; inversion_clear 0;
-    subst; try (constructor (auto; solve_by_trans_modulo)).
+    subst; try (tconstructor (auto; solve_by_trans_modulo)).
 Qed.
 Next Obligation. (* irreflexivity *)
   intro E; inversion E; subst; clear E.
@@ -494,7 +494,7 @@ Program Instance list_StrictOrder `(OrderedType A) :
 Next Obligation. (* transitivity *)
   intros nx ny nz nHlt1; revert nz; induction nHlt1;
     do 2 intro; inversion_clear 0;
-      try constructor (solve_by_trans_modulo).
+      try tconstructor (idtac; solve_by_trans_modulo).
   constructor 3; order.
 Qed.
 Next Obligation. (* irreflexivity *)

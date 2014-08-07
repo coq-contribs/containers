@@ -1708,7 +1708,7 @@ Module MapAVL.
       Fixpoint flatten_e (e : enumeration elt) : list (key*elt) :=
         match e with
           | End => nil
-          | More x e t r => (x,e) :: elements t ++ flatten_e r
+          | More x e t' r => (x,e) :: elements t' ++ flatten_e r
         end.
 
       Lemma flatten_e_elements :

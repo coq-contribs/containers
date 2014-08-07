@@ -1254,13 +1254,13 @@ Module PositiveMap.
       end.
     Property t_cmp_spec : forall x y, compare_spec t_eq t_lt x y (t_cmp x y).
     Proof.
-      induction x; destruct y; try (constructor (constructor)).
-      simpl; destruct (compare_dec o o0); try (constructor; constructor (auto)).
+      induction x; destruct y; try (tconstructor (constructor)).
+      simpl; destruct (compare_dec o o0); try (constructor; tconstructor (auto)).
       destruct (IHx1 y1); try constructor.
-      constructor (assumption).
+      tconstructor (assumption).
       destruct (IHx2 y2); try constructor;
-        constructor (solve [auto using t_eq_sym]).
-      constructor (solve [auto using t_eq_sym]).
+        tconstructor (solve [auto using t_eq_sym]).
+      tconstructor (solve [auto using t_eq_sym]).
     Qed.
 
     Program Instance Map_OrderedType : OrderedType (t elt) := {

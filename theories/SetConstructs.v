@@ -348,8 +348,8 @@ Section DisjointUnion.
     rewrite union_iff, 2map_iff.
     destruct x as [a|b]; firstorder; inversion_clear H0;
       rewrite H1; assumption.
-    repeat intro; constructor (assumption).
-    repeat intro; constructor (assumption).
+    repeat intro; Tactics.tconstructor ltac:(assumption).
+    repeat intro; Tactics.tconstructor ltac:(assumption).
   Qed.
   Global Opaque disj_union.
   Local Transparent Equal _eq In FSet_OrderedType.
