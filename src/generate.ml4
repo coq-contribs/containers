@@ -593,11 +593,11 @@ let generate_simple_ot gref =
   (* define the equality predicate *)
   let mutual_eq = make_eq_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  Command.do_mutual_inductive mutual_eq false false true;
+  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = make_lt_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  Command.do_mutual_inductive mutual_lt false false true;
+  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
   (* declare the comparison function *)
   let id_cmp, ttt = make_cmp_def ind mind ibody in
     declare_definition id_cmp
@@ -840,11 +840,11 @@ let generate_rec_ot gref =
   (* define the equality predicate *)
   let mutual_eq = rmake_eq_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  Command.do_mutual_inductive mutual_eq false false true;
+  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = rmake_lt_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  Command.do_mutual_inductive mutual_lt false false true;
+  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
   (* declare the comparison function *)
   let fexpr = rmake_cmp_def ind mask mind ibody in
   Command.do_fixpoint Decl_kinds.Global false [(fexpr, [])];
@@ -1531,12 +1531,12 @@ let generate_mutual_ot gref =
   if_verbose Pp.msgnl (str "Inductive kind : " ++ pr_kind kind);
   (* define the equality predicate *)
   let mutual_eq = mmake_eq_mutual ind masks mind in
-  Command.do_mutual_inductive mutual_eq false false true;
+  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
   (* prove the Equivalence instance *)
   mprove_Equivalence kind mind;
   (* define the strict ordering predicate *)
   let mutual_lt = mmake_lt_mutual ind masks mind in
-  Command.do_mutual_inductive mutual_lt false false true;
+  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
   (* prove the StrictOrder instance *)
   mprove_StrictOrder kind mind;
   (* define the comparison function *)
