@@ -78,5 +78,5 @@ let rec print_constr fmt c =
 
 let print_ast constr_expr =
   let constr, _ =
-    Constrintern.interp_constr Evd.empty (Global.env ()) constr_expr in
+    Constrintern.interp_constr (Global.env ()) Evd.empty constr_expr in
     fprintf std_formatter "%a" print_constr constr
