@@ -74,7 +74,8 @@ let rec print_constr fmt c =
 	name_a
 	(print_array f ", " "") type_a
 	(print_array f ", " "") constr_a
-  | Proj (c, p) -> fprintf fmt "Proj (%s, %a)" (Names.string_of_con c) f p
+  | Proj (p, c) -> fprintf fmt "Proj (%s, %a)" 
+    (Names.string_of_con (Names.Projection.constant p)) f c
 
 let print_ast constr_expr =
   let constr, _ =

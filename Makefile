@@ -62,7 +62,6 @@ COQDOCLIBS?=\
 TESTVOFILES=$(TESTVFILES:.v=.vo)
 TESTVFILES=tests/BenchMarks.v tests/TestSet.v tests/TestMap.v
 CAMLP4OPTIONS=-loc loc
-OCAMLLIBS=-I src
 COQDOC=$(COQBIN)coqdoc -interpolate -utf8
 CONTAINERS_PLUGINOPT=src/containers_plugin.cmxs
 CONTAINERS_PLUGIN=src/containers_plugin.cma
@@ -112,7 +111,7 @@ CAMLP4EXTEND=pa_extend.cmo q_MLast.cmo pa_macro.cmo
 else
 CAMLP4EXTEND=
 endif
-PP?=-pp '$(CAMLP4O) -I $(CAMLLIB) -I . $(COQSRCLIBS) compat5.cmo \
+PP?=-pp '$(CAMLP4O) -I $(CAMLLIB) $(COQSRCLIBS) compat5.cmo \
   $(CAMLP4EXTEND) $(GRAMMARS) $(CAMLP4OPTIONS) -impl'
 
 ##################
@@ -220,7 +219,7 @@ endif
 #                                     #
 #######################################
 
-all: $(VOFILES) $(CMOFILES) $(CMAFILES) $(if $(HASNATDYNLINK_OR_EMPTY),$(CMXSFILES)) 
+all: $(VOFILES) $(CMOFILES) $(CMAFILES) $(if $(HASNATDYNLINK_OR_EMPTY),$(CMXSFILES)) $(TESTVOFILES)
 
 mlihtml: $(MLIFILES:.mli=.cmi)
 	 mkdir $@ || rm -rf $@/*
@@ -265,7 +264,7 @@ beautify: $(VFILES:=.beautified)
 	@echo 'Do not do "make clean" until you are sure that everything went well!'
 	@echo 'If there were a problem, execute "for file in $$(find . -name \*.v.old -print); do mv $${file} $${file%.old}; done" in your shell/'
 
-.PHONY: all opt byte archclean clean install uninstall_me.sh uninstall userinstall depend html validate
+.PHONY: all opt byte archclean clean install uninstall_me.sh uninstall userinstall depend html validate clean clean-test install install-plugin test
 
 ###################
 #                 #
@@ -273,27 +272,20 @@ beautify: $(VFILES:=.beautified)
 #                 #
 ###################
 
-: 
-	
-#the following is inserted verbatim
+clean: clean-test
 
-install-plugin:
-	install -d $(COQLIB)/user-contrib/Containers/Plugin/
-	install -t $(COQLIB)/user-contrib/Containers/Plugin/ $(CONTAINERS_PLUGIN) $(CONTAINERS_PLUGINOPT)
+clean-test: 
+	-rm -f  $(TESTVOFILES) $(TESTVFILES:.v=.glob) $(TESTVFILES:.v=.v.d)
 
 install: install-plugin
 
-test: $(TESTVOFILES) 
+install-plugin: 
+	install -d $(COQLIB)/user-contrib/Containers/Plugin/
+	install -t $(COQLIB)/user-contrib/Containers/Plugin/ $(CONTAINERS_PLUGIN) $(CONTAINERS_PLUGINOPT)
+
+test: $(TESTVOFILES)
 
 $(TESTVOFILES): $(VOFILES)
-
-clean-test: 
-	-rm -f  $(TESTVOFILES) $(TESTVFILES:.v=.glob) $(TESTVFILES:.v=.v.d) 
-
-clean: clean-test
-
-#end verbatim
-
 
 ####################
 #                  #
@@ -357,7 +349,7 @@ clean:
 	rm -f $(VOFILES) $(VOFILES:.vo=.vi) $(GFILES) $(VFILES:.v=.v.d) $(VFILES:=.beautified) $(VFILES:=.old)
 	rm -f all.ps all-gal.ps all.pdf all-gal.pdf all.glob $(VFILES:.v=.glob) $(VFILES:.v=.tex) $(VFILES:.v=.g.tex) all-mli.tex
 	- rm -rf html mlihtml uninstall_me.sh
-	- rm -rf 
+	- rm -rf $(TESTVOFILES)
 
 archclean:
 	rm -f *.cmx *.o
@@ -382,70 +374,73 @@ Makefile: Make
 #                 #
 ###################
 
-%.cmi: %.mli
+$(MLIFILES:.mli=.cmi): %.cmi: %.mli
 	$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<
 
-%.mli.d: %.mli
+$(addsuffix .d,$(MLIFILES)): %.mli.d: %.mli
 	$(OCAMLDEP) -slash $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
-%.cmo: %.ml4
+$(ML4FILES:.ml4=.cmo): %.cmo: %.ml4
 	$(CAMLC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<
 
-%.cmx: %.ml4
+$(filter-out $(MLPACKFILES:.mlpack=.cmx),$(ML4FILES:.ml4=.cmx)): %.cmx: %.ml4
 	$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<
 
-%.ml4.d: %.ml4
-	$(COQDEP) $(OCAMLLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+$(addsuffix .d,$(ML4FILES)): %.ml4.d: %.ml4
+	$(COQDEP) $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
-%.cmo: %.ml
+$(MLFILES:.ml=.cmo): %.cmo: %.ml
 	$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<
 
-%.cmx: %.ml
+$(filter-out $(MLPACKFILES:.mlpack=.cmx),$(MLFILES:.ml=.cmx)): %.cmx: %.ml
 	$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $<
 
-%.ml.d: %.ml
+$(addsuffix .d,$(MLFILES)): %.ml.d: %.ml
 	$(OCAMLDEP) -slash $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
-%.cmxs: %.cmxa
-	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -linkall -shared -o $@ $<
-
-%.cmxs: %.cmx
+$(filter-out $(MLLIBFILES:.mllib=.cmxs),$(MLFILES:.ml=.cmxs) $(ML4FILES:.ml4=.cmxs) $(MLPACKFILES:.mlpack=.cmxs)): %.cmxs: %.cmx
 	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $<
 
-%.cma: | %.mllib
+$(MLLIBFILES:.mllib=.cmxs): %.cmxs: %.cmxa
+	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -linkall -shared -o $@ $<
+
+$(MLLIBFILES:.mllib=.cma): %.cma: | %.mllib
 	$(CAMLLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^
 
-%.cmxa: | %.mllib
+$(MLLIBFILES:.mllib=.cmxa): %.cmxa: | %.mllib
 	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^
 
-%.mllib.d: %.mllib
-	$(COQDEP) $(OCAMLLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+$(addsuffix .d,$(MLLIBFILES)): %.mllib.d: %.mllib
+	$(COQDEP) $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
-%.vo %.glob: %.v
+$(VOFILES): %.vo: %.v
 	$(COQC) $(COQDEBUG) $(COQFLAGS) $*
 
-%.vi: %.v
+$(GLOBFILES): %.glob: %.v
+	$(COQC) $(COQDEBUG) $(COQFLAGS) $*
+
+$(VFILES:.v=.vi): %.vi: %.v
 	$(COQC) -quick $(COQDEBUG) $(COQFLAGS) $*
 
-%.g: %.v
+$(GFILES): %.g: %.v
 	$(GALLINA) $<
 
-%.tex: %.v
+$(VFILES:.v=.tex): %.tex: %.v
 	$(COQDOC) $(COQDOCFLAGS) -latex $< -o $@
 
-%.html: %.v %.glob
+$(HTMLFILES): %.html: %.v %.glob
 	$(COQDOC) $(COQDOCFLAGS) -html $< -o $@
 
-%.g.tex: %.v
+$(VFILES:.v=.g.tex): %.g.tex: %.v
 	$(COQDOC) $(COQDOCFLAGS) -latex -g $< -o $@
 
-%.g.html: %.v %.glob
+$(GHTMLFILES): %.g.html: %.v %.glob
 	$(COQDOC) $(COQDOCFLAGS)  -html -g $< -o $@
 
-%.v.d: %.v
+$(addsuffix .d,$(VFILES)): %.v.d: %.v
 	$(COQDEP) $(COQLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
-%.v.beautified:
+$(addsuffix .beautified,$(VFILES)): %.v.beautified:
 	$(COQC) $(COQDEBUG) $(COQFLAGS) -beautify $*
 
 # WARNING
