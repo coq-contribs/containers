@@ -324,7 +324,7 @@ let get_context ty =
   let env = Global.env () in
   let sigma = Evd.from_env env in
   let sigma, _ty = Typing.e_type_of env sigma ty in
-    Evd.evar_universe_context sigma
+   sigma
 
 let prove_refl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
