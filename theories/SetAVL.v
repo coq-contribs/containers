@@ -605,7 +605,7 @@ Module SetAVL.
     Hint Immediate In_1.
 
     Lemma In_node_iff :
-      forall l x r h y,
+      forall l x r h (y:elt),
         In y (Node l x r h) <-> In y l \/ y === x \/ In y r.
     Proof.
       intuition_in; eauto.
