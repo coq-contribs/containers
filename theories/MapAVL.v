@@ -1,4 +1,4 @@
-Require MapList.
+Require MapList Bool OrderedTypeEx.
 Require Import MapInterface ZArith.
 
 (** This file corresponds to [FMapAVL.v] in the standard library
@@ -350,7 +350,7 @@ Module MapAVL.
       end.
 
     (** One step of comparison of elements *)
-    Require Import Bool.
+    Import Bool.
     Definition equal_more x1 d1 (cont:enumeration->bool) e2 :=
       match e2 with
         | End => false
@@ -2386,7 +2386,7 @@ Section EncapsulationOrd.
 
   (** Correctness of this comparison *)
 
-  Require Import OrderedTypeEx.
+  Import OrderedTypeEx.
   Definition Cmp c : relation (list (key * elt)) :=
    match c with
      | Eq => @list_eq (key*elt) (prod_eq _eq _eq)

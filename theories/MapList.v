@@ -1,5 +1,7 @@
 Require Export OrderedType.
 Require Import SetoidList.
+Require OrderedTypeEx.
+Require MapInterface.
 
 Generalizable All Variables.
 
@@ -209,7 +211,7 @@ Implicit Arguments
 
 (** Maps seen as an OrderedType : list comparison based
    solely on the first component. *)
-Require Import OrderedTypeEx.
+Import OrderedTypeEx.
 (* Definition map_eq `{OrderedType A} (B : Type) : relation (dict A B) := *)
 (*   @list_eq (A*B) (asym_prod_eq B _eq). *)
 (* Definition map_Equivalence `{OrderedType A} (B : Type) :  *)
@@ -1491,8 +1493,7 @@ Section MoreDefinitions.
   Qed.
 End MoreDefinitions.
 
-Require MapInterface.
-Require Import OrderedTypeEx.
+Import OrderedTypeEx.
 (** A dictionary [key, elt] can be seen as an OrderedType if the type of elements
    is also an OrderedType (only the fact that [key] is an OrderedType is required
    to build the dictionary). In that case, the equality is standard pointwise

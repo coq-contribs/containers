@@ -1,5 +1,7 @@
 Require Import OrderedTypeEx.
 Require Import SetInterface ZArith Program.Basics.
+Require Bool.
+Require SetList.
 
 Generalizable All Variables.
 
@@ -352,7 +354,7 @@ Module SetAVL.
     Definition partition f := partition_acc f (Leaf,Leaf).
 
     (** * [for_all] and [exists] *)
-    Require Import Bool.
+    Import Bool.
     Fixpoint for_all (f:elt->bool) s :=
       match s with
         | Leaf => true
@@ -1493,7 +1495,7 @@ Module SetAVL.
         destruct (andb_prop _ _ H0); auto.
       Qed.
 
-      Require Import Bool.
+      Import Bool.
       Lemma exists_1 : forall s `{Proper _ (_eq ==> @eq bool) f},
         Exists (fun x => f x = true) s -> exists_ f s = true.
       Proof.
@@ -1547,7 +1549,7 @@ Module SetAVL.
     Qed.
 
     (** * Fold *)
-    Require SetList. Require Import Bool.
+    Import Bool.
     Definition fold' (A : Type) (f : elt -> A -> A)(s : tree) :=
       SetList.SetList.fold f (elements s).
     Implicit Arguments fold' [A].
