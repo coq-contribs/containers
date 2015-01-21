@@ -1170,6 +1170,11 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     mltac_plugin = "eauto";
     mltac_tactic = "eauto";
   } in
+  let eauto = {
+    mltac_name = eauto;
+    mltac_index = 0;
+    (** Fragile, should change if eauto has more entries *)
+  } in
   let solve_arg : raw_tactic_expr =
     let lems =
       Array.fold_left
