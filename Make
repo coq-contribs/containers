@@ -4,17 +4,9 @@
 -extra "$(TESTVOFILES)" "$(VOFILES)" ""
 -extra-phony test "$(TESTVOFILES)" ""
 
--extra-phony install-plugin ""
-"install -d $(COQLIB)/user-contrib/Containers/Plugin/
-	install -t $(COQLIB)/user-contrib/Containers/Plugin/ $(CONTAINERS_PLUGIN) $(CONTAINERS_PLUGINOPT)"
--extra-phony install install-plugin ""
-
 -extra-phony clean-test "" "-rm -f  $(TESTVOFILES) $(TESTVFILES:.v=.glob) $(TESTVFILES:.v=.v.d)"
 -extra-phony clean clean-test ""
 
-CONTAINERS_PLUGIN = "src/containers_plugin.cma"
-CONTAINERS_PLUGINOPT = "src/containers_plugin.cmxs"
-COQDOC = "$(COQBIN)coqdoc -interpolate -utf8"
 CAMLP4OPTIONS = "-loc loc"
 src/printing.ml
 src/printing.mli
