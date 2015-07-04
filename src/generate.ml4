@@ -323,7 +323,7 @@ let dummy_hook = Lemmas.mk_hook (fun _ _ -> ())
 let get_context ty = 
   let env = Global.env () in
   let sigma = Evd.from_env env in
-  let sigma, _ty = Typing.e_type_of env sigma ty in
+  let sigma, _ty = Typing.type_of env sigma ty in
    sigma
 
 let prove_refl indconstr mind body =
