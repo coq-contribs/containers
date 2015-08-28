@@ -323,7 +323,7 @@ let dummy_hook = Lemmas.mk_hook (fun _ _ -> ())
 let get_context ty = 
   let env = Global.env () in
   let sigma = Evd.from_env env in
-  let sigma, _ty = Typing.e_type_of env sigma ty in
+  let sigma, _ty = Typing.type_of env sigma ty in
    sigma
 
 let prove_refl indconstr mind body =
@@ -1167,9 +1167,12 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   let clt i = mkIdentC ids_lt.(i) in
   let ceq i = mkIdentC ids_eq.(i) in
   let eauto = {
-    mltac_plugin = "eauto";
-    mltac_tactic = "eauto";
-  } in
+    mltac_name = {
+      mltac_plugin = "eauto";
+      mltac_tactic = "eauto";
+    };
+    mltac_index = 0 }
+     in
 (*  let eauto = {
     mltac_name = eauto;
     mltac_index = 0;
