@@ -111,7 +111,7 @@ let make_eq_mutual ind mind body =
       (Array.to_list body.Declarations.mind_consnames)
       (Array.to_list body.Declarations.mind_consnrealdecls)
   in
-    [(dl id_eq, [], Some (bin_rel_t id_t) , lconstr), []]
+    [((dl id_eq, None), [], Some (bin_rel_t id_t) , lconstr), []]
 
 (* building the ordering predicate *)
 let lt_StrictOrder_ref =
@@ -188,7 +188,7 @@ let make_lt_mutual ind mind body =
   let names = Array.to_list body.Declarations.mind_consnames in
   let decls = Array.to_list body.Declarations.mind_consnrealdecls in
   let lconstr = lt_constr id_lt names decls in
-    [(dl id_lt, [], Some (bin_rel_t id_t) , lconstr), []]
+    [((dl id_lt, None), [], Some (bin_rel_t id_t) , lconstr), []]
 
 (* building the comparison function *)
 let ref_Eq = Libnames.Ident (dl (Names.id_of_string "Eq"))
@@ -406,7 +406,7 @@ let prove_Equivalence indconstr mind body =
   in
     declare_definition id_equiv
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      [] None equiv None dummy_hook (* ; *)
+      None [] None equiv None dummy_hook (* ; *)
 (*     Classes.declare_instance false (dl id_equiv) *)
 
 (* proving that the ordering is a [StrictOrder] *)
@@ -527,7 +527,7 @@ let prove_StrictOrder indconstr mind body =
   in
     declare_definition id_strict
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      [] None strict None dummy_hook
+      None [] None strict None dummy_hook
 
 
 (* proving the [OrderedType] instance *)
@@ -579,7 +579,7 @@ let prove_OrderedType indconstr mind body =
   in
     declare_definition id_ot
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-    [] None ot None (Lemmas.mk_hook (fun loc gr ->
+    None [] None ot None (Lemmas.mk_hook (fun loc gr ->
 		     Typeclasses.declare_instance None (loc=Decl_kinds.Local) gr))
     
 let generate_simple_ot gref =
@@ -602,7 +602,7 @@ let generate_simple_ot gref =
   let id_cmp, ttt = make_cmp_def ind mind ibody in
     declare_definition id_cmp
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      [] None ttt None dummy_hook;
+      None [] None ttt None dummy_hook;
   (* prove the Equivalence instance *)
   prove_Equivalence indconstr mind ibody;
   (* prove the StrictOrder instance *)
@@ -671,7 +671,7 @@ let rmake_eq_mutual ind mask mind body =
       (Array.to_list body.mind_consnrealdecls)
       mask
   in
-    [(dl id_eq, [], Some (bin_rel_t id_t) , lconstr), []]
+    [((dl id_eq, None), [], Some (bin_rel_t id_t) , lconstr), []]
 
 let rlexi_constr eqid ltid cid carity cmask =
   let xbar = app_expl_i [] "x" carity in
@@ -736,7 +736,7 @@ let rmake_lt_mutual ind mask mind body =
   let names = Array.to_list body.Declarations.mind_consnames in
   let decls = Array.to_list body.Declarations.mind_consnrealdecls in
   let lconstr = rlt_constr id_eq id_lt names decls mask in
-    [(dl id_lt, [], Some (bin_rel_t id_t) , lconstr), []]
+    [((dl id_lt, None), [], Some (bin_rel_t id_t) , lconstr), []]
 
 let mk_cmp_if cmpid x y mask =
   if mask then
@@ -807,7 +807,7 @@ let rmake_cmp_def ind mask mind body =
 	       (mkIdentC y, (None, None))] in
   let branches = rbranches_constr id_cmp names decls mask in
   let body =  CCases (Loc.ghost, RegularStyle, None, items, branches) in
-    (dl id_cmp, (None, Constrexpr.CStructRec),
+    ((dl id_cmp, None), (None, Constrexpr.CStructRec),
      [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
 		    Default Decl_kinds.Explicit, mkIdentC id_t)],
      ccomparison,
@@ -924,7 +924,7 @@ let mmake_eq_mutual ind (masks : int list list array) mind =
   in
     Array.to_list
       (Array.mapi (fun i lconstr ->
-		     (dl ids_eq.(i), [], Some (bin_rel_t ids.(i)), lconstr),
+		     ((dl ids_eq.(i), None), [], Some (bin_rel_t ids.(i)), lconstr),
 		     [])
 	 lconstrs)
 
@@ -940,7 +940,7 @@ let mprove_refl k ids ids_eq mind =
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
-			(Some (dl (add_suffix id_eq "_refl")),
+			(Some (dl (add_suffix id_eq "_refl"), None),
 			 ([], goal i, None))) ids_eq) in
   let refltactic =
     load_tactic (match k with
@@ -971,7 +971,7 @@ let mprove_sym k ids ids_eq mind =
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
-			(Some (dl (add_suffix id_eq "_sym")),
+			(Some (dl (add_suffix id_eq "_sym"), None),
 			 ([], goal i, None))) ids_eq) in
   let symtactic =
     load_tactic (match k with
@@ -1006,7 +1006,7 @@ let mprove_trans k ids ids_eq mind =
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
-			(Some (dl (add_suffix id_eq "_trans")),
+			(Some (dl (add_suffix id_eq "_trans"), None),
 			 ([], goal i, None))) ids_eq) in
   let transtactic =
     load_tactic (match k with
@@ -1041,7 +1041,7 @@ let mprove_Equivalence k mind =
     Array.iteri (fun i id_equiv ->
 		   declare_definition id_equiv
 		     (Decl_kinds.Global, false, Decl_kinds.Definition)
-		     [] None (equiv i) None dummy_hook)
+		     None [] None (equiv i) None dummy_hook)
       ids_equiv
 
 let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
@@ -1114,7 +1114,7 @@ let mmake_lt_mutual ind masks mind =
   in
   Array.to_list
     (Array.mapi (fun i lconstr ->
-		   (dl ids_lt.(i), [], Some (bin_rel_t ids.(i)), lconstr),
+		   ((dl ids_lt.(i), None), [], Some (bin_rel_t ids.(i)), lconstr),
 		   [])
        lconstrs)
 
@@ -1219,7 +1219,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     let lemmas_eq_lt =
       Array.to_list (Array.mapi
 		       (fun i id ->
-			  (Some (dl (add_suffix id "_lt")),
+			  (Some (dl (add_suffix id "_lt"), None),
 			   ([], lemma_eq_lt i, None))) ids_eq) in
     let eqlttactic =
       Tacinterp.interp (apply_tactic "minductive_eq_lt_gt"
@@ -1227,7 +1227,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     let lemmas_eq_gt =
       Array.to_list (Array.mapi
 		       (fun i id ->
-			  (Some (dl (add_suffix id "_gt")),
+			  (Some (dl (add_suffix id "_gt"), None),
 			   ([], lemma_eq_gt i, None))) ids_eq) in
     let eqgttactic =
       Tacinterp.interp (apply_tactic "minductive_eq_lt_gt"
@@ -1261,7 +1261,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_lt ->
-			(Some (dl (add_suffix id_lt "_trans")),
+			(Some (dl (add_suffix id_lt "_trans"), None),
 			 ([], goal i, None))) ids_lt) in
   let transtactic =
     match k with
@@ -1311,7 +1311,7 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id ->
-			(Some (dl (add_suffix id "_irrefl")),
+			(Some (dl (add_suffix id "_irrefl"), None),
 			 ([], goal i, None))) ids_lt) in
   let irrefltactic =
     load_tactic (if k = Simple then "inductive_irrefl"
@@ -1343,7 +1343,7 @@ let mprove_StrictOrder k mind =
   Array.iteri (fun i id_order ->
 		 declare_definition id_order
 		   (Decl_kinds.Global, false, Decl_kinds.Definition)
-		   [] None (strict i) None dummy_hook)
+		   None [] None (strict i) None dummy_hook)
     ids_order
 
 let mmk_cmp_if ids_cmp x y mask =
@@ -1418,7 +1418,7 @@ let mmake_cmp_def k ind masks mind =
     CCases (Loc.ghost, RegularStyle, None, items, branches)
   in
   let make_block i body =
-    (dl ids_cmp.(i), (None, Constrexpr.CStructRec),
+    ((dl ids_cmp.(i), None), (None, Constrexpr.CStructRec),
      [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
 		    Default Decl_kinds.Explicit, mkIdentC ids.(i))],
      ccomparison,
@@ -1435,7 +1435,7 @@ let mmake_cmp_def k ind masks mind =
 	in
 	  declare_definition ids_cmp.(0)
 	    (Decl_kinds.Global, false, Decl_kinds.Definition)
-	    [] None def None dummy_hook
+	    None [] None def None dummy_hook
     | Recursive | Mutual ->
 	let defs =
 	  Array.to_list (Array.mapi
@@ -1469,7 +1469,7 @@ let mprove_compare_spec k ids mind =
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id ->
-			(Some (dl (add_suffix id "_compare_spec")),
+			(Some (dl (add_suffix id "_compare_spec"), None),
 			 ([], goal i, None))) ids) in
   let using_sym : raw_tactic_expr =
     TacAtom (Loc.ghost,
@@ -1505,7 +1505,7 @@ let mprove_OrderedType k mind =
     in
       declare_definition id_ot
 	(Decl_kinds.Global, false, Decl_kinds.Definition)
-	[] None ot None (Lemmas.mk_hook (fun _ gr -> 
+	None [] None ot None (Lemmas.mk_hook (fun _ gr -> 
 			 Typeclasses.declare_instance None false gr))
   in
   Array.iteri prove_ot mind.mind_packets
