@@ -231,7 +231,7 @@ let lexi_eqn_constr r carity =
       | [], [] -> mkIdentC id_Eq
       | [x], [y] -> mk_cmp x y
       | x::xs, y::ys ->
-	  let item = [(mk_cmp x y, (None, None))] in
+	  let item = [mk_cmp x y, None, None] in
 	  let brlt =
 	    (Loc.ghost,
 	     [(Loc.ghost, [patc ref_Lt []])],
@@ -284,8 +284,8 @@ let make_cmp_def ind mind body =
   let decls = Array.to_list body.Declarations.mind_consnrealdecls in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let items = [(mkIdentC x, (None, None));
-	       (mkIdentC y, (None, None))] in
+  let items = [mkIdentC x, None, None;
+	       mkIdentC y, None, None] in
   let branches = branches_constr id_cmp names decls in
   let body =  CCases (Loc.ghost, RegularStyle, None, items, branches) in
   let def =
@@ -750,7 +750,7 @@ let rlexi_eqn_constr r cmpid carity cmask =
       | [], [], [] -> mkIdentC id_Eq
       | [x], [y], [mask] -> mk_cmp_if cmpid x y mask
       | x::xs, y::ys, mask::masks ->
-	  let item = [(mk_cmp_if cmpid x y mask, (None, None))] in
+	  let item = [mk_cmp_if cmpid x y mask, None, None] in
 	  let brlt =
 	    (Loc.ghost,
 	     [(Loc.ghost, [patc ref_Lt []])],
@@ -803,8 +803,8 @@ let rmake_cmp_def ind mask mind body =
   let decls = Array.to_list body.Declarations.mind_consnrealdecls in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let items = [(mkIdentC x, (None, None));
-	       (mkIdentC y, (None, None))] in
+  let items = [mkIdentC x, None, None;
+	       mkIdentC y, None, None] in
   let branches = rbranches_constr id_cmp names decls mask in
   let body =  CCases (Loc.ghost, RegularStyle, None, items, branches) in
     ((dl id_cmp, None), (None, Constrexpr.CStructRec),
@@ -1358,7 +1358,7 @@ let mlexi_eqn_constr r ids_cmp carity cmask =
       | [], [], [] -> mkIdentC id_Eq
       | [x], [y], [mask] -> mmk_cmp_if ids_cmp x y mask
       | x::xs, y::ys, mask::masks ->
-	  let item = [(mmk_cmp_if ids_cmp x y mask, (None, None))] in
+	  let item = [mmk_cmp_if ids_cmp x y mask, None, None] in
 	  let brlt =
 	    (Loc.ghost,
 	     [(Loc.ghost, [patc ref_Lt []])],
@@ -1412,8 +1412,8 @@ let mmake_cmp_def k ind masks mind =
   let make_body i body =
     let names = Array.to_list body.Declarations.mind_consnames in
     let decls = Array.to_list body.Declarations.mind_consnrealdecls in
-    let items = [(mkIdentC x, (None, None));
-		 (mkIdentC y, (None, None))] in
+    let items = [mkIdentC x, None, None;
+		 mkIdentC y, None, None] in
     let branches = mbranches_constr ids_cmp names decls masks.(i) in
     CCases (Loc.ghost, RegularStyle, None, items, branches)
   in
