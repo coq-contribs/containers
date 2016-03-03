@@ -34,9 +34,9 @@ endef
 includecmdwithout@ = $(eval $(subst @,$(donewline),$(shell { $(1) | tr -d '\r' | tr '\n' '@'; })))
 $(call includecmdwithout@,$(COQBIN)coqtop -config)
 
-TIMED=
-TIMECMD=
-STDTIME?=/usr/bin/time -f "$* (user: %U mem: %M ko)"
+TIMED?=
+TIMECMD?=
+STDTIME=/usr/bin/time -f "$* (user: %U mem: %M ko)"
 TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
 
 vo_to_obj = $(addsuffix .o,\
@@ -62,9 +62,9 @@ COQDOCLIBS?=\
 #                        #
 ##########################
 
-TESTVOFILES=$(TESTVFILES:.v=.vo)
-TESTVFILES=tests/BenchMarks.v tests/TestSet.v tests/TestMap.v
 CAMLP4OPTIONS=-loc loc
+TESTVFILES=tests/BenchMarks.v tests/TestSet.v tests/TestMap.v
+TESTVOFILES=$(TESTVFILES:.v=.vo)
 
 OPT?=
 COQDEP?="$(COQBIN)coqdep" -c
@@ -138,34 +138,34 @@ endif
 #                    #
 ######################
 
-VFILES:=theories/SetConstructs.v\
-  theories/Generate.v\
-  theories/Maps.v\
-  theories/CMapPositiveInstance.v\
-  theories/CMapPositive.v\
-  theories/MapPositiveInstance.v\
-  theories/MapPositive.v\
-  theories/MapAVLInstance.v\
-  theories/MapAVL.v\
-  theories/MapListInstance.v\
-  theories/MapList.v\
-  theories/MapFacts.v\
-  theories/MapNotations.v\
-  theories/MapInterface.v\
-  theories/Sets.v\
-  theories/SetAVLInstance.v\
-  theories/SetAVL.v\
-  theories/SetListInstance.v\
-  theories/SetList.v\
-  theories/SetEqProperties.v\
-  theories/SetProperties.v\
-  theories/SetDecide.v\
-  theories/SetFacts.v\
-  theories/SetInterface.v\
-  theories/Bridge.v\
-  theories/OrderedTypeEx.v\
+VFILES:=theories/OrderedType.v\
   theories/Tactics.v\
-  theories/OrderedType.v
+  theories/OrderedTypeEx.v\
+  theories/Bridge.v\
+  theories/SetInterface.v\
+  theories/SetFacts.v\
+  theories/SetDecide.v\
+  theories/SetProperties.v\
+  theories/SetEqProperties.v\
+  theories/SetList.v\
+  theories/SetListInstance.v\
+  theories/SetAVL.v\
+  theories/SetAVLInstance.v\
+  theories/Sets.v\
+  theories/MapInterface.v\
+  theories/MapNotations.v\
+  theories/MapFacts.v\
+  theories/MapList.v\
+  theories/MapListInstance.v\
+  theories/MapAVL.v\
+  theories/MapAVLInstance.v\
+  theories/MapPositive.v\
+  theories/MapPositiveInstance.v\
+  theories/CMapPositive.v\
+  theories/CMapPositiveInstance.v\
+  theories/Maps.v\
+  theories/Generate.v\
+  theories/SetConstructs.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
 -include $(addsuffix .d,$(VFILES))
@@ -200,8 +200,8 @@ endif
 
 .SECONDARY: $(addsuffix .d,$(ML4FILES))
 
-MLFILES:=src/containers_plugin_mod.ml\
-  src/printing.ml
+MLFILES:=src/printing.ml\
+  src/containers_plugin_mod.ml
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
 -include $(addsuffix .d,$(MLFILES))
@@ -306,7 +306,7 @@ beautify: $(VFILES:=.beautified)
 	@echo 'Do not do "make clean" until you are sure that everything went well!'
 	@echo 'If there were a problem, execute "for file in $$(find . -name \*.v.old -print); do mv $${file} $${file%.old}; done" in your shell/'
 
-.PHONY: all archclean beautify byte clean cleanall gallina gallinahtml html install install-doc install-natdynlink install-toploop opt printenv quick uninstall userinstall validate vio2vo clean clean-test test
+.PHONY: all archclean beautify byte clean cleanall gallina gallinahtml html install install-doc install-natdynlink install-toploop opt printenv quick uninstall userinstall validate vio2vo test clean-test clean
 
 ###################
 #                 #
@@ -314,14 +314,14 @@ beautify: $(VFILES:=.beautified)
 #                 #
 ###################
 
-clean:: clean-test
+$(TESTVOFILES): $(VOFILES)
+
+test: $(TESTVOFILES)
 
 clean-test: 
 	-rm -f  $(TESTVOFILES) $(TESTVFILES:.v=.glob) $(TESTVFILES:.v=.v.d)
 
-test: $(TESTVOFILES)
-
-$(TESTVOFILES): $(VOFILES)
+clean:: clean-test
 
 ####################
 #                  #
@@ -455,7 +455,7 @@ $(MLLIBFILES:.mllib=.cmxa): %.cmxa: | %.mllib
 	$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^
 
 $(addsuffix .d,$(MLLIBFILES)): %.mllib.d: %.mllib
-	$(COQDEP) $(OCAMLLIBS) "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
+	$(COQDEP) $(OCAMLLIBS) -c "$<" > "$@" || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 $(VOFILES): %.vo: %.v
 	$(COQC) $(COQDEBUG) $(COQFLAGS) $*
