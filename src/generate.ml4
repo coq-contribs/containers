@@ -17,6 +17,8 @@ open Constrexpr_ops
 open Topconstr
 open Printing
 
+DECLARE PLUGIN "containers_plugin"
+
 type inductive_kind = Simple | Recursive | Mutual
 let pr_kind = function
   | Simple -> str "Simple"
@@ -1182,14 +1184,14 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     let lems =
       Array.fold_left
 	(fun acc id_eq ->
-	   ((),mkIdentC (add_suffix id_eq "_sym"))::
-	     ((),mkIdentC (add_suffix id_eq "_trans"))::acc
+	   (mkIdentC (add_suffix id_eq "_sym"))::
+	     (mkIdentC (add_suffix id_eq "_trans"))::acc
 	) [] ids_eq in
 	       TacML (Loc.ghost, eauto,
-			  [in_gen (rawwit (wit_opt wit_int_or_var)) None;
-			   in_gen (rawwit (wit_opt wit_int_or_var)) None;
-			   in_gen (rawwit Eauto.wit_auto_using) lems;
-			   in_gen (rawwit Eauto.wit_hintbases) (Some [])])
+			  [TacGeneric (in_gen (rawwit (wit_opt wit_int_or_var)) None);
+			   TacGeneric (in_gen (rawwit (wit_opt wit_int_or_var)) None);
+			   TacGeneric (in_gen (rawwit G_auto.wit_auto_using) lems);
+			   TacGeneric (in_gen (rawwit G_auto.wit_hintbases) (Some []))])
   in
   let prove_eq_lt_and_gt () =
     let lemma_eq_lt i =
@@ -1444,6 +1446,29 @@ let mmake_cmp_def k ind masks mind =
 	in
 	Command.do_fixpoint Decl_kinds.Global false defs
 
+let using_sym =
+  let name = {
+    mltac_plugin = "containers_plugin";
+    mltac_tactic = "using_sym";
+  } in
+  let entry = {
+    mltac_name = name;
+    mltac_index = 0;
+  } in
+  let tac args _ =
+    let map v =
+      let id = Tacinterp.Value.cast (topwit wit_ident) v in
+      { Tacexpr.delayed = fun _ sigma -> Sigma.here (Constrintern.global_reference id) sigma }
+    in
+    let args = List.map map args in
+    Auto.h_auto None args (Some [])
+  in
+  let () = Tacenv.register_ml_tactic name [|tac|] in
+  fun ids ->
+    let map id = TacGeneric (in_gen (rawwit wit_ident) id) in
+    let ids = List.map map ids in
+    TacML (Loc.ghost, entry, ids)
+
 (* proving the [OrderedType] instance *)
 let mprove_compare_spec k ids mind =
   let ids_eq = Array.map (fun id_t -> add_suffix id_t "_eq") ids in
@@ -1471,10 +1496,7 @@ let mprove_compare_spec k ids mind =
 		     (fun i id ->
 			(Some (dl (add_suffix id "_compare_spec"), None),
 			 ([], goal i, None))) ids) in
-  let using_sym : raw_tactic_expr =
-    TacAtom (Loc.ghost,
-	     TacAuto (Tacexpr.Off, None,
-		      List.map mkIdentC (Array.to_list ids_sym), Some [])) in
+  let using_sym = using_sym (Array.to_list ids_sym) in
   let comparespectactic = match k with
     | Simple -> load_tactic "solve_compare_spec"
     | Recursive ->
