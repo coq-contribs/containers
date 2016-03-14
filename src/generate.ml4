@@ -211,7 +211,7 @@ let pathole = CPatAtom (Loc.ghost, None)
 let rec lholes = function
   | 0 -> []
   | n -> pathole::(lholes (n-1))
-let patc r l = CPatCstr (Loc.ghost, r, [], l)
+let patc r l = CPatCstr (Loc.ghost, r, None, l)
 let rec lpats v acc = function
   | 0 -> acc
   | n ->
