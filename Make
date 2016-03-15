@@ -13,6 +13,7 @@ src/printing.mli
 src/generate.ml4
 src/containers_plugin_mod.ml
 src/containers_plugin.mllib
+
 theories/OrderedType.v
 theories/Tactics.v
 theories/OrderedTypeEx.v
@@ -41,5 +42,6 @@ theories/CMapPositiveInstance.v
 theories/Maps.v
 theories/Generate.v
 theories/SetConstructs.v
+
 TESTVFILES = "tests/BenchMarks.v tests/TestSet.v tests/TestMap.v"
 TESTVOFILES = "$(TESTVFILES:.v=.vo)"
