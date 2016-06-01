@@ -829,7 +829,7 @@ let generate_rec_ot gref =
   let (mind, ibody) = Global.lookup_inductive (fst ind) in
     fprintf std_formatter "%a" print_ind_body ibody;
   let pptree = Rtree.pp_tree print_recarg ibody.Declarations.mind_recargs in
-    if_verbose Pp.msgnl pptree;
+    if_verbose Feedback.msg_notice pptree;
   let mask = make_mask ibody in
     List.iter
       (fun paths ->
@@ -1558,7 +1558,7 @@ let generate_mutual_ot gref =
       else
 	Recursive
   in
-  if_verbose Pp.msgnl (str "Inductive kind : " ++ pr_kind kind);
+  if_verbose Feedback.msg_notice (str "Inductive kind : " ++ pr_kind kind);
   (* define the equality predicate *)
   let mutual_eq = mmake_eq_mutual ind masks mind in
   Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
@@ -1605,19 +1605,19 @@ let generate_scheme gref =
 let print_paths gref =
   let ind = Nametab.global_inductive gref in
   let (mind, ibody) = Global.lookup_inductive ind in
-    if_verbose Pp.msgnl
+    if_verbose Feedback.msg_notice
       (str "Params :" ++ (int mind.mind_nparams));
-    if_verbose Pp.msgnl
+    if_verbose Feedback.msg_notice
       (str "Recursively uniform params :" ++ (int mind.mind_nparams_rec));
-    if_verbose Pp.msgnl
+    if_verbose Feedback.msg_notice
       (str "Real arguments :" ++ (int ibody.mind_nrealargs));
   Array.iteri
     (fun i body ->
        let id = Names.string_of_id body.mind_typename in
        let pptree =
 	 Rtree.pp_tree print_recarg body.mind_recargs in
-	 if_verbose Pp.msgnl (str id);
-	 if_verbose Pp.msgnl pptree)
+	 if_verbose Feedback.msg_notice (str id);
+	 if_verbose Feedback.msg_notice pptree)
     mind.mind_packets
 
 (* Syntax extensions *)
