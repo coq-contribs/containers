@@ -19,7 +19,7 @@ open Printing
 
 DECLARE PLUGIN "containers_plugin"
 
-let typing_flags = { Declarations.check_guarded = true }
+let typing_flags = Declareops.safe_flags
 
 type inductive_kind = Simple | Recursive | Mutual
 let pr_kind = function
