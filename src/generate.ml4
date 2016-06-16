@@ -19,6 +19,8 @@ open Printing
 
 DECLARE PLUGIN "containers_plugin"
 
+let typing_flags = { Declarations.check_guarded = true }
+
 type inductive_kind = Simple | Recursive | Mutual
 let pr_kind = function
   | Simple -> str "Simple"
@@ -583,7 +585,7 @@ let prove_OrderedType indconstr mind body =
       (Decl_kinds.Global, false, Decl_kinds.Definition)
     None [] None ot None (Lemmas.mk_hook (fun loc gr ->
 		     Typeclasses.declare_instance None (loc=Decl_kinds.Local) gr))
-    
+
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
   let indconstr = Universes.constr_of_global gindref in
@@ -595,11 +597,11 @@ let generate_simple_ot gref =
   (* define the equality predicate *)
   let mutual_eq = make_eq_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
+  Command.do_mutual_inductive true mutual_eq false false Decl_kinds.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = make_lt_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
+  Command.do_mutual_inductive true mutual_lt false false Decl_kinds.Finite;
   (* declare the comparison function *)
   let id_cmp, ttt = make_cmp_def ind mind ibody in
     declare_definition id_cmp
@@ -842,14 +844,14 @@ let generate_rec_ot gref =
   (* define the equality predicate *)
   let mutual_eq = rmake_eq_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
+  Command.do_mutual_inductive true mutual_eq false false Decl_kinds.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = rmake_lt_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
+  Command.do_mutual_inductive true mutual_lt false false Decl_kinds.Finite;
   (* declare the comparison function *)
   let fexpr = rmake_cmp_def ind mask mind ibody in
-  Command.do_fixpoint Decl_kinds.Global false [(fexpr, [])];
+  Command.do_fixpoint ~flags:typing_flags Decl_kinds.Global false [(fexpr, [])];
   (* prove the Equivalence instance *)
   prove_Equivalence indconstr mind ibody;
   (* prove the StrictOrder instance *)
@@ -1444,7 +1446,7 @@ let mmake_cmp_def k ind masks mind =
 			   (fun i body -> make_block i body, [])
 			   mind.mind_packets)
 	in
-	Command.do_fixpoint Decl_kinds.Global false defs
+	Command.do_fixpoint ~flags:typing_flags Decl_kinds.Global false defs
 
 let using_sym =
   let name = {
@@ -1561,12 +1563,12 @@ let generate_mutual_ot gref =
   if_verbose Feedback.msg_notice (str "Inductive kind : " ++ pr_kind kind);
   (* define the equality predicate *)
   let mutual_eq = mmake_eq_mutual ind masks mind in
-  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
+  Command.do_mutual_inductive true mutual_eq false false Decl_kinds.Finite;
   (* prove the Equivalence instance *)
   mprove_Equivalence kind mind;
   (* define the strict ordering predicate *)
   let mutual_lt = mmake_lt_mutual ind masks mind in
-  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
+  Command.do_mutual_inductive true mutual_lt false false Decl_kinds.Finite;
   (* prove the StrictOrder instance *)
   mprove_StrictOrder kind mind;
   (* define the comparison function *)
