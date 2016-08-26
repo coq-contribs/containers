@@ -674,7 +674,7 @@ Section WeakFacts.
 
   Global Instance Empty_m elt : Proper (Equal ==> iff) (@Empty _ _ _ elt).
   Proof.
-    unfold Empty; intros m m' Hm; intuition.
+    unfold Empty; intros m m' Hm; unfold not; split; intros.
     rewrite <-Hm in H0; eauto.
     rewrite Hm in H0; eauto.
   Qed.
