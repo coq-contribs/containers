@@ -1123,7 +1123,7 @@ let mmake_lt_mutual ind masks mind =
 (* proving that the ordering is a [StrictOrder] *)
 open Tacexpr
 open Genarg
-open Constrarg
+open Stdarg
 
 let apply_tactic s tacs =
   Tacexpr.TacArg
