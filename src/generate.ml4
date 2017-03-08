@@ -1,6 +1,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
+open Ltac_plugin
 open Format
 open Term
 open Coqlib
