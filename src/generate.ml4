@@ -1141,7 +1141,7 @@ let seq_eapply lids : raw_tactic_expr =
 			 Misctypes.ImplicitBindings [mkIdentC b]))],
 		       None))
   in
-    TacFun ([Some b], TacFirst (List.map apply lids))
+    TacFun ([Name b], TacFirst (List.map apply lids))
 
 let seq_eapply_sym lids lsyms : raw_tactic_expr =
   let b = Nameops.make_ident "__B" None in
@@ -1160,7 +1160,7 @@ let seq_eapply_sym lids lsyms : raw_tactic_expr =
 	TacId []
       ])
   in
-    TacFun ([Some b], TacFirst (List.map2 apply_with_sym lids lsyms))
+    TacFun ([Name b], TacFirst (List.map2 apply_with_sym lids lsyms))
 
 
 let mprove_lt_trans k ids ids_eq ids_lt mind =
