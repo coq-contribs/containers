@@ -947,7 +947,7 @@ let mprove_refl k ids ids_eq mind =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
 			(Some (dl (add_suffix id_eq "_refl"), None),
-			 ([], goal i, None))) ids_eq) in
+			 ([], goal i))) ids_eq) in
   let refltactic =
     load_tactic (match k with
 		   | Simple -> "inductive_refl"
@@ -978,7 +978,7 @@ let mprove_sym k ids ids_eq mind =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
 			(Some (dl (add_suffix id_eq "_sym"), None),
-			 ([], goal i, None))) ids_eq) in
+			 ([], goal i))) ids_eq) in
   let symtactic =
     load_tactic (match k with
 		   | Simple -> "inductive_sym"
@@ -1013,7 +1013,7 @@ let mprove_trans k ids ids_eq mind =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
 			(Some (dl (add_suffix id_eq "_trans"), None),
-			 ([], goal i, None))) ids_eq) in
+			 ([], goal i))) ids_eq) in
   let transtactic =
     load_tactic (match k with
 		   | Simple -> "inductive_trans"
@@ -1226,7 +1226,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
       Array.to_list (Array.mapi
 		       (fun i id ->
 			  (Some (dl (add_suffix id "_lt"), None),
-			   ([], lemma_eq_lt i, None))) ids_eq) in
+			   ([], lemma_eq_lt i))) ids_eq) in
     let eqlttactic =
       Tacinterp.interp (apply_tactic "minductive_eq_lt_gt"
 			  [apply_tactic "msolve_eq_lt" [solve_arg]]) in
@@ -1234,7 +1234,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
       Array.to_list (Array.mapi
 		       (fun i id ->
 			  (Some (dl (add_suffix id "_gt"), None),
-			   ([], lemma_eq_gt i, None))) ids_eq) in
+			   ([], lemma_eq_gt i))) ids_eq) in
     let eqgttactic =
       Tacinterp.interp (apply_tactic "minductive_eq_lt_gt"
 			  [apply_tactic "msolve_eq_gt" [solve_arg]])
@@ -1268,7 +1268,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
     Array.to_list (Array.mapi
 		     (fun i id_lt ->
 			(Some (dl (add_suffix id_lt "_trans"), None),
-			 ([], goal i, None))) ids_lt) in
+			 ([], goal i))) ids_lt) in
   let transtactic =
     match k with
       | Simple -> load_tactic "inductive_lexico_trans"
@@ -1318,7 +1318,7 @@ let mprove_lt_irrefl k ids ids_eq ids_lt mind =
     Array.to_list (Array.mapi
 		     (fun i id ->
 			(Some (dl (add_suffix id "_irrefl"), None),
-			 ([], goal i, None))) ids_lt) in
+			 ([], goal i))) ids_lt) in
   let irrefltactic =
     load_tactic (if k = Simple then "inductive_irrefl"
 		 else "minductive_irrefl")
@@ -1499,7 +1499,7 @@ let mprove_compare_spec k ids mind =
     Array.to_list (Array.mapi
 		     (fun i id ->
 			(Some (dl (add_suffix id "_compare_spec"), None),
-			 ([], goal i, None))) ids) in
+			 ([], goal i))) ids) in
   let using_sym = using_sym (Array.to_list ids_sym) in
   let comparespectactic = match k with
     | Simple -> load_tactic "solve_compare_spec"
