@@ -4,6 +4,7 @@
 open Ltac_plugin
 open Format
 open Term
+open EConstr
 open Coqlib
 open Tacmach
 open Tacticals
@@ -333,8 +334,8 @@ let prove_refl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
-  let ceq = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_eq))) in
+  let ceq = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_eq)))) in
   let goal =
     mkNamedProd x indconstr
       (mkApp (ceq, [| mkVar x; mkVar x |])) in
@@ -351,8 +352,8 @@ let prove_sym indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let ceq = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_eq))) in
+  let ceq = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_eq)))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -373,8 +374,8 @@ let prove_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let ceq = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_eq))) in
+  let ceq = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_eq)))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -420,10 +421,10 @@ let prove_lt_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let clt = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_eq))) in
+  let clt = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_lt)))) in
+  let ceq = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_eq)))) in
   let prove_eq_lt_and_gt () =
     let id_eq_sym = add_suffix id_t "_eq_sym" in
     let id_eq_trans = add_suffix id_t "_eq_trans" in
@@ -489,12 +490,12 @@ let prove_lt_irrefl indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_eq))) in
-  let cfalse = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl (Names.id_of_string "False")))) in
+  let clt = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_lt)))) in
+  let ceq = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_eq)))) in
+  let cfalse = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl (Names.id_of_string "False"))))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -541,15 +542,15 @@ let prove_t_compare_spec indconstr mind body =
   let id_cmp = add_suffix id_t "_cmp" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_lt))) in
-  let ceq = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_eq))) in
-  let ccmp = Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl id_cmp))) in
-  let ccomp_spec = Universes.constr_of_reference
+  let clt = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_lt)))) in
+  let ceq = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_eq)))) in
+  let ccmp = EConstr.of_constr (Universes.constr_of_reference
+    (Nametab.global (Libnames.Ident (dl id_cmp)))) in
+  let ccomp_spec = EConstr.of_constr (Universes.constr_of_reference
     (Nametab.global (Libnames.Ident
-		       (dl (Names.id_of_string "compare_spec")))) in
+		       (dl (Names.id_of_string "compare_spec"))))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -588,6 +589,7 @@ let prove_OrderedType indconstr mind body =
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
   let indconstr = Universes.constr_of_global gindref in
+  let indeconstr = EConstr.of_constr indconstr in
   (* retrieve the inductive type *)
   let (ind, ctx) =
     Inductive.find_inductive (Global.env ()) indconstr in
@@ -607,11 +609,11 @@ let generate_simple_ot gref =
       (Decl_kinds.Global, false, Decl_kinds.Definition)
       None [] None ttt None dummy_hook;
   (* prove the Equivalence instance *)
-  prove_Equivalence indconstr mind ibody;
+  prove_Equivalence indeconstr mind ibody;
   (* prove the StrictOrder instance *)
-  prove_StrictOrder indconstr mind ibody;
+  prove_StrictOrder indeconstr mind ibody;
   (* prove the OrderedType instance *)
-  prove_OrderedType indconstr mind ibody
+  prove_OrderedType indeconstr mind ibody
 
 (* for recursive datatypes *)
 
@@ -824,6 +826,7 @@ let make_mask body =
 let generate_rec_ot gref =
   let gindref = Nametab.global gref in
   let indconstr = Universes.constr_of_global gindref in
+  let indeconstr = EConstr.of_constr indconstr in
     (* retrieve the inductive type *)
   let (ind, _) =
     Inductive.find_rectype (Global.env ()) indconstr in
@@ -852,11 +855,11 @@ let generate_rec_ot gref =
   let fexpr = rmake_cmp_def ind mask mind ibody in
   Command.do_fixpoint Decl_kinds.Global false [(fexpr, [])];
   (* prove the Equivalence instance *)
-  prove_Equivalence indconstr mind ibody;
+  prove_Equivalence indeconstr mind ibody;
   (* prove the StrictOrder instance *)
-  prove_StrictOrder indconstr mind ibody;
+  prove_StrictOrder indeconstr mind ibody;
   (* prove the OrderedType instance *)
-  prove_OrderedType indconstr mind ibody
+  prove_OrderedType indeconstr mind ibody
 
 open Declarations
 
@@ -1459,7 +1462,7 @@ let using_sym =
   let tac args _ =
     let map v =
       let id = Tacinterp.Value.cast (topwit wit_ident) v in
-      { Tacexpr.delayed = fun _ sigma -> Sigma.here (Constrintern.global_reference id) sigma }
+      { Tacexpr.delayed = fun _ sigma -> Sigma.here (EConstr.of_constr (Constrintern.global_reference id)) sigma }
     in
     let args = List.map map args in
     Auto.h_auto None args (Some [])
