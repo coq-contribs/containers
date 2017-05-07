@@ -2291,9 +2291,9 @@ Section AdditionalMorphisms.
       [contradiction Hnotin | contradiction Hnotin0]; eexists; eauto.
     inversion H; subst; split; intros [v' [Hvv' Hv'm]]; exists v'.
     rewrite Hvv'; split; auto.
-    rewrite <- (MapsTo_fun Hin) in *; auto.
+    rewrite <- (MapsTo_fun Hin); auto.
     rewrite Hvv'; split; auto.
-    rewrite <- (MapsTo_fun Hin0) in *; auto.
+    rewrite <- (MapsTo_fun Hin0); auto.
     clear Hm; revert Hm'; intro Hm.
     assert (Cut :
       forall k v,

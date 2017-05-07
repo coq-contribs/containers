@@ -236,12 +236,12 @@ Section BasicProperties.
   Proof. expAdd; fsetdec. Qed.
 
   Lemma union_Add : Add x s s' -> Add x (union s s'') (union s' s'').
-  Proof. expAdd; rewrite Add_Equal in H; fsetdec. Qed.
+  Proof. expAdd; fsetdec. Qed.
 
   Lemma inter_Add :
     In x s'' -> Add x s s' -> Add x (inter s s'') (inter s' s'').
   Proof. (* expAdd; rewrite Add_Equal in H0; fsetdec. Qed. *) (** trop lent *)
-    expAdd; rewrite Add_Equal in H0; rewrite H0; clear H0; fsetdec.
+    expAdd; rewrite H0; clear H0; fsetdec.
   Qed.
 
   Lemma union_Equal : In x s'' -> Add x s s' -> union s s'' [=] union s' s''.
