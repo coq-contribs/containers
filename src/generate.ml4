@@ -813,7 +813,7 @@ let rmake_cmp_def ind mask mind body =
   let branches = rbranches_constr id_cmp names decls mask in
   let body =  CCases (Loc.ghost, RegularStyle, None, items, branches) in
     ((dl id_cmp, None), (None, Constrexpr.CStructRec),
-     [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
+     [CLocalAssum([dl (Names.Name x); dl (Names.Name y)],
 		    Default Decl_kinds.Explicit, mkIdentC id_t)],
      ccomparison,
      Some body)
@@ -1425,7 +1425,7 @@ let mmake_cmp_def k ind masks mind =
   in
   let make_block i body =
     ((dl ids_cmp.(i), None), (None, Constrexpr.CStructRec),
-     [LocalRawAssum([dl (Names.Name x); dl (Names.Name y)],
+     [CLocalAssum([dl (Names.Name x); dl (Names.Name y)],
 		    Default Decl_kinds.Explicit, mkIdentC ids.(i))],
      ccomparison,
      Some (make_body i body))
