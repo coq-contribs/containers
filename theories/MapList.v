@@ -2,6 +2,7 @@ Require Export OrderedType.
 Require Import SetoidList.
 Require OrderedTypeEx.
 Require MapInterface.
+Require Import FunInd.
 
 Generalizable All Variables.
 

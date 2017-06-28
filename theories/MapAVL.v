@@ -1,5 +1,6 @@
 Require MapList Bool OrderedTypeEx.
 Require Import MapInterface ZArith.
+Require Import FunInd.
 
 (** This file corresponds to [FMapAVL.v] in the standard library
    and implements finite maps as AVL trees. The corresponding

@@ -2,6 +2,7 @@ Require Import OrderedTypeEx.
 Require Import SetInterface ZArith Program.Basics.
 Require Bool.
 Require SetList.
+Require Import FunInd.
 
 Generalizable All Variables.
 
