@@ -23,9 +23,9 @@ Notation "s #2" := (snd s) (at level 9, format "s '#2'") : pair_scope.
    preservation *)
 
 Module MapAVL.
-  Open Local Scope pair_scope.
-  Open Local Scope lazy_bool_scope.
-  Open Local Scope Z_scope.
+  Local Open Scope pair_scope.
+  Local Open Scope lazy_bool_scope.
+  Local Open Scope Z_scope.
   Local Notation int := Z.
   Section Key.
   Context `{key_OT : OrderedType key}.

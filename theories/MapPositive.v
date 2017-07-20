@@ -9,7 +9,7 @@ Require Import MapInterface.
 Set Implicit Arguments.
 Generalizable All Variables.
 
-Open Local Scope positive_scope.
+Local Open Scope positive_scope.
 
 (** * An implementation of [FMapInterface.S] for positive keys. *)
 

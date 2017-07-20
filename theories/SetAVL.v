@@ -26,9 +26,9 @@ Notation "s #2" := (snd s) (at level 9, format "s '#2'") : pair_scope.
    Functor of pure functions + a posteriori proofs of invariant
    preservation *)
 Module SetAVL.
-  Open Local Scope pair_scope.
-  Open Local Scope lazy_bool_scope.
-  Open Local Scope Z_scope.
+  Local Open Scope pair_scope.
+  Local Open Scope lazy_bool_scope.
+  Local Open Scope Z_scope.
   Local Notation int := Z.
 
   Set Implicit Arguments.
