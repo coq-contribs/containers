@@ -937,25 +937,26 @@ let mmake_eq_mutual ind (masks : int list list array) mind =
 		     [])
 	 lconstrs)
 
-let do_proofs env evd goals tac =
-  let _ = List.map (fun (name,goal) ->
-	    Lemmas.start_proof name property_kind evd goal dummy_hook;
-	    ignore(Pfedit.by tac);
-	    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
-	   ) goals in ()
+let do_proofs goals tac =
+  let env = Global.env () in
+  let evd = ref (Evd.from_env env) in
+  let do_proof (name,goal) =
+    let egoal = Constrintern.interp_constr_evars env evd (CAst.make goal) in
+    Lemmas.start_proof name property_kind !evd egoal dummy_hook;
+    ignore(Pfedit.by tac);
+    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None)) in
+  ignore(List.map do_proof goals)
+
 
 
 let mprove_refl k ids ids_eq mind =
-  let env = Global.env () in
-  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    Constrintern.interp_constr_evars env evd
-      (CAst.make @@ (CProdN ([[dl (Names.Name x)],
-			      Default Decl_kinds.Explicit,
-			      mkIdentC ids.(i)],
-			     mkAppC (ceq i, [mkIdentC x; mkIdentC x])))) in
+    (CProdN ([[dl (Names.Name x)],
+	      Default Decl_kinds.Explicit,
+	      mkIdentC ids.(i)],
+	     mkAppC (ceq i, [mkIdentC x; mkIdentC x]))) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq -> (add_suffix id_eq "_refl", goal i))
@@ -966,27 +967,22 @@ let mprove_refl k ids ids_eq mind =
 		   | Recursive -> "rinductive_refl"
 		   | Mutual -> "minductive_refl")
   in
-  do_proofs env !evd goals refltactic
+  do_proofs goals refltactic
 
 
 
 let mprove_sym k ids ids_eq mind =
-  let env = Global.env () in
-  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    Constrintern.interp_constr_evars
-      env evd
-      (CAst.make @@
-	 CProdN ([[dl (Names.Name x); dl (Names.Name y)],
-		  Default Decl_kinds.Explicit,
-		  mkIdentC ids.(i);
-		  [None, Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
-		 mkAppC (ceq i, [mkIdentC y; mkIdentC x]))) in
+    CProdN ([[dl (Names.Name x); dl (Names.Name y)],
+	     Default Decl_kinds.Explicit,
+	     mkIdentC ids.(i);
+	     [None, Names.Anonymous],
+	     Default Decl_kinds.Explicit,
+	     mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
+	    mkAppC (ceq i, [mkIdentC y; mkIdentC x])) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
@@ -997,30 +993,25 @@ let mprove_sym k ids ids_eq mind =
 		   | Recursive -> "rinductive_sym"
 		   | Mutual -> "minductive_sym")
   in
-  do_proofs env !evd goals symtactic
+  do_proofs goals symtactic
 
 
 let mprove_trans k ids ids_eq mind =
-  let env = Global.env () in
-  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    Constrintern.interp_constr_evars
-      env evd
-      (CAst.make @@
-	 CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-		  Default Decl_kinds.Explicit,
-		  mkIdentC ids.(i);
-		  [None, Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
-		  [None, Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (ceq i, [mkIdentC y; mkIdentC z])],
-		 mkAppC (ceq i, [mkIdentC x; mkIdentC z]))) in
+    CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
+	     Default Decl_kinds.Explicit,
+	     mkIdentC ids.(i);
+	     [None, Names.Anonymous],
+	     Default Decl_kinds.Explicit,
+	     mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+	     [None, Names.Anonymous],
+	     Default Decl_kinds.Explicit,
+	     mkAppC (ceq i, [mkIdentC y; mkIdentC z])],
+	    mkAppC (ceq i, [mkIdentC x; mkIdentC z])) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
@@ -1031,7 +1022,7 @@ let mprove_trans k ids ids_eq mind =
 		   | Recursive -> "rinductive_trans"
 		   | Mutual -> "minductive_trans")
   in
-  do_proofs env !evd goals transtactic
+  do_proofs goals transtactic
 
 let mkARefC id = None, Libnames.Ident (None, id), None
 
@@ -1171,8 +1162,6 @@ let seq_eapply_sym lids lsyms : raw_tactic_expr =
 
 
 let mprove_lt_trans k ids ids_eq ids_lt mind =
-  let env = Global.env () in
-  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
@@ -1206,33 +1195,27 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   in
   let prove_eq_lt_and_gt () =
     let lemma_eq_lt i =
-      Constrintern.interp_constr_evars
-      env evd
-      (CAst.make @@
-	 CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-		  Default Decl_kinds.Explicit,
-		  mkIdentC ids.(i);
-		  [None,Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
-		  [None,Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (clt i, [mkIdentC x; mkIdentC z])],
-		 mkAppC (clt i, [mkIdentC y; mkIdentC z]))) in
+      CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
+	       Default Decl_kinds.Explicit,
+	       mkIdentC ids.(i);
+	       [None,Names.Anonymous],
+	       Default Decl_kinds.Explicit,
+	       mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+	       [None,Names.Anonymous],
+	       Default Decl_kinds.Explicit,
+	       mkAppC (clt i, [mkIdentC x; mkIdentC z])],
+	      mkAppC (clt i, [mkIdentC y; mkIdentC z])) in
     let lemma_eq_gt i =
-      Constrintern.interp_constr_evars
-      env evd
-      (CAst.make @@
-	 CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-		  Default Decl_kinds.Explicit,
-		  mkIdentC ids.(i);
-		  [None,Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
-		  [None,Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (clt i, [mkIdentC z; mkIdentC x])],
-		 mkAppC (clt i, [mkIdentC z; mkIdentC y]))) in
+      CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
+	       Default Decl_kinds.Explicit,
+	       mkIdentC ids.(i);
+	       [None,Names.Anonymous],
+	       Default Decl_kinds.Explicit,
+	       mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+	       [None,Names.Anonymous],
+	       Default Decl_kinds.Explicit,
+	       mkAppC (clt i, [mkIdentC z; mkIdentC x])],
+	      mkAppC (clt i, [mkIdentC z; mkIdentC y])) in
     let lemmas_eq_lt =
       Array.to_list (Array.mapi
 		       (fun i id ->
@@ -1248,27 +1231,24 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
       Tacinterp.interp (apply_tactic "minductive_eq_lt_gt"
 			  [apply_tactic "msolve_eq_gt" [solve_arg]])
     in
-    do_proofs env !evd lemmas_eq_lt eqlttactic;
-    do_proofs env !evd lemmas_eq_gt eqgttactic
+    do_proofs lemmas_eq_lt eqlttactic;
+    do_proofs lemmas_eq_gt eqgttactic
   in
   let goal i =
-    Constrintern.interp_constr_evars
-      env evd
-      (CAst.make @@
-	 CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-		  Default Decl_kinds.Explicit,
-		  mkIdentC ids.(i);
-		  [None,Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (clt i, [mkIdentC x; mkIdentC y]);
-		  [None,Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (clt i, [mkIdentC y; mkIdentC z])],
-		 mkAppC (clt i, [mkIdentC x; mkIdentC z]))) in
+    CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
+	     Default Decl_kinds.Explicit,
+	     mkIdentC ids.(i);
+	     [None,Names.Anonymous],
+	     Default Decl_kinds.Explicit,
+	     mkAppC (clt i, [mkIdentC x; mkIdentC y]);
+	     [None,Names.Anonymous],
+	     Default Decl_kinds.Explicit,
+	     mkAppC (clt i, [mkIdentC y; mkIdentC z])],
+	    mkAppC (clt i, [mkIdentC x; mkIdentC z])) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_lt ->
-			(add_suffix id_lt "_trans", goal i)) ids_lt) in
+		      (add_suffix id_lt "_trans", goal i)) ids_lt) in
   let transtactic =
     match k with
       | Simple -> load_tactic "inductive_lexico_trans"
@@ -1288,40 +1268,37 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 	  Tacinterp.interp (apply_tactic "minductive_lexico_trans"
 			      [strans; seqgt; seqlt])
   in
-  if k = Simple then () else prove_eq_lt_and_gt ();
-  do_proofs env !evd goals transtactic
+  if k = Simple then ()
+  else prove_eq_lt_and_gt ();
+  do_proofs goals transtactic
+
 
 let mprove_lt_irrefl k ids ids_eq ids_lt mind =
-  let env = Global.env () in
-  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let clt i = mkIdentC ids_lt.(i) in
   let ceq i = mkIdentC ids_eq.(i) in
   let cfalse = mkIdentC (Names.Id.of_string "False") in
   let goal i =
-    Constrintern.interp_constr_evars
-      env evd
-      (CAst.make @@
-	 CProdN ([[dl (Names.Name x); dl (Names.Name y)],
-		  Default Decl_kinds.Explicit,
-		  mkIdentC ids.(i);
-		  [None,Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (clt i, [mkIdentC x; mkIdentC y]);
-		  [None,Names.Anonymous],
-		  Default Decl_kinds.Explicit,
-		  mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
-		 cfalse)) in
+    CProdN ([[dl (Names.Name x); dl (Names.Name y)],
+	     Default Decl_kinds.Explicit,
+	     mkIdentC ids.(i);
+	     [None,Names.Anonymous],
+	     Default Decl_kinds.Explicit,
+	     mkAppC (clt i, [mkIdentC x; mkIdentC y]);
+	     [None,Names.Anonymous],
+	     Default Decl_kinds.Explicit,
+	     mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
+	    cfalse) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id ->
-			(add_suffix id "_irrefl",goal i)) ids_lt) in
+		      (add_suffix id "_irrefl",goal i)) ids_lt) in
   let irrefltactic =
     load_tactic (if k = Simple then "inductive_irrefl"
 		 else "minductive_irrefl")
   in
-  do_proofs env !evd goals irrefltactic
+  do_proofs goals irrefltactic
 
 let mprove_StrictOrder k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
@@ -1468,8 +1445,6 @@ let using_sym ?loc =
 
 (* proving the [OrderedType] instance *)
 let mprove_compare_spec k ids mind =
-  let env = Global.env () in
-  let evd = ref (Evd.from_env env) in
   let ids_eq = Array.map (fun id_t -> add_suffix id_t "_eq") ids in
   let ids_lt = Array.map (fun id_t -> add_suffix id_t "_lt") ids in
   let ids_cmp = Array.map (fun id_t -> add_suffix id_t "_cmp") ids in
@@ -1481,16 +1456,13 @@ let mprove_compare_spec k ids mind =
   let ccmp i = mkIdentC (ids_cmp.(i)) in
   let ccomp_spec = mkIdentC (Names.Id.of_string "compare_spec") in
   let goal i =
-    Constrintern.interp_constr_evars
-      env evd
-      (CAst.make @@
-	 CProdN ([[dl (Names.Name x); dl (Names.Name y)],
-		  Default Decl_kinds.Explicit,
-		  mkIdentC ids.(i)],
-		 mkAppC (ccomp_spec,
-			 [ ceq i; clt i;
-			   mkIdentC x; mkIdentC y;
-			   (mkAppC (ccmp i, [ mkIdentC x; mkIdentC y ]))])))
+    CProdN ([[dl (Names.Name x); dl (Names.Name y)],
+	     Default Decl_kinds.Explicit,
+	     mkIdentC ids.(i)],
+	    mkAppC (ccomp_spec,
+		    [ ceq i; clt i;
+		      mkIdentC x; mkIdentC y;
+		      (mkAppC (ccmp i, [ mkIdentC x; mkIdentC y ]))]))
   in
   let goals =
     Array.to_list (Array.mapi
@@ -1504,7 +1476,7 @@ let mprove_compare_spec k ids mind =
     | Mutual ->
        Tacinterp.interp (apply_tactic "msolve_compare_spec" [using_sym])
   in
-  do_proofs env !evd goals comparespectactic
+  do_proofs goals comparespectactic
 
 let mprove_OrderedType k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
