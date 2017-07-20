@@ -1602,19 +1602,20 @@ Module MapAVL.
         induction s as [ | l Hl y e r Hr h]; simpl; intuition.
         inv @bst.
         apply Hl; auto.
-        constructor.
-        apply Hr; eauto.
-        apply (InA_InfA (eqA := PX.eqke)); auto using KeyOrderedType.eqke_Equiv.
-        intros (y',e').
-        destruct (elements_aux_mapsto r acc y' e'); intuition.
-        red; simpl; eauto.
-        red; simpl; eauto.
-        intros.
-        inversion_clear H.
-        destruct H7; simpl in *.
-        order.
-        destruct ((proj1 (elements_aux_mapsto r acc x e0)) H7); eauto.
-        transitivity y; eauto.
+        - constructor.
+          + apply Hr; eauto.
+          + apply (InA_InfA (eqA := PX.eqke)); auto using KeyOrderedType.eqke_Equiv.
+            intros (y',e').
+            destruct (elements_aux_mapsto r acc y' e'); intuition.
+            * red; simpl; eauto.
+            * red; simpl; eauto.
+        - intros.
+          inversion_clear H.
+          + destruct H7; simpl in *.
+            order.
+          + destruct ((proj1 (elements_aux_mapsto r acc x e0)) H7).
+            * transitivity y; eauto.
+            * eauto.
       Qed.
 
       Lemma elements_sort : forall s : t elt, bst s -> sort ltk (elements s).
