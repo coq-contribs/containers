@@ -1419,24 +1419,32 @@ let mmake_cmp_def k ind masks mind =
 	in
 	Command.do_fixpoint Decl_kinds.Global false defs
 
+let using_sym_tac = ref (None:Tacexpr.ml_tactic_entry option)
+
 let using_sym ?loc =
-  let name = {
-    mltac_plugin = "containers_plugin";
-    mltac_tactic = "using_sym";
-  } in
-  let entry = {
-    mltac_name = name;
-    mltac_index = 0;
-  } in
-  let tac args _ =
-    let map v =
-      let id = Tacinterp.Value.cast (topwit Stdarg.wit_ident) v in
-      (fun ist sigma -> (sigma, (EConstr.of_constr (Universes.constr_of_global (Constrintern.global_reference id)))))
-    in
-    let args = List.map map args in
-    Auto.h_auto None args (Some [])
+  let entry = match !using_sym_tac with
+    | None ->
+       let name = {
+	 mltac_plugin = "containers_plugin";
+	 mltac_tactic = "using_sym";
+       } in
+       let entry = {
+	 mltac_name = name;
+	 mltac_index = 0;
+       } in
+       let tac args _ =
+	 let map v =
+	   let id = Tacinterp.Value.cast (topwit Stdarg.wit_ident) v in
+	   (fun ist sigma -> (sigma, (EConstr.of_constr (Universes.constr_of_global (Constrintern.global_reference id)))))
+	 in
+	 let args = List.map map args in
+	 Auto.h_auto None args (Some [])
+       in
+       let _ = Tacenv.register_ml_tactic name [|tac|] in
+       let _ = using_sym_tac := Some entry in
+       entry
+    | Some entry -> entry
   in
-  let () = Tacenv.register_ml_tactic name [|tac|] in
   fun ids ->
   let map id = TacGeneric (in_gen (rawwit Stdarg.wit_ident) id) in
   let ids = List.map map ids in
