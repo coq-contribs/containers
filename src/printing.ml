@@ -19,14 +19,20 @@ let string_of_name name =
 let print_kn fmt kn =
   fprintf fmt "%s" (Names.string_of_con (Names.Constant.make1 kn))
 
+let coq_init_constant s =
+  Universes.constr_of_global @@
+    Coqlib.gen_reference_in_modules "RecursiveDefinition" Coqlib.init_modules s
+
+let coq_or = coq_init_constant "or"
+
 let rec print_constr fmt c =
   let f = print_constr in
   match kind_of_term c with
-  | _ when c = Universes.constr_of_global @@ build_coq_False () -> fprintf fmt "False"
+  | _ when c = Universes.constr_of_global @@ Coqlib.build_coq_False () -> fprintf fmt "False"
   | _ when c = Universes.constr_of_global @@ build_coq_True () -> fprintf fmt "True"
   | _ when c = Universes.constr_of_global @@ build_coq_not () -> fprintf fmt "Not"
-(*  | _ when c = build_coq_or () -> fprintf fmt "Or"
-  | _ when c = build_coq_and () -> fprintf fmt "And" *)
+  | _ when c = coq_or -> fprintf fmt "Or"
+  | _ when c = Universes.constr_of_global @@ Coqlib.build_coq_and () -> fprintf fmt "And"
   | Rel i -> fprintf fmt "rel %d" i
   | Var id -> fprintf fmt ("var %s") (Names.Id.to_string id)
   | Meta _ -> fprintf fmt "meta"
