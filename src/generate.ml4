@@ -581,7 +581,9 @@ let prove_OrderedType indconstr mind body =
       (Lemmas.mk_hook (fun loc gr ->
 		       API.Typeclasses.add_instance
 			 (API.Typeclasses.new_instance tc Hints.empty_hint_info
-						       (loc=Decl_kinds.Local) false gr)))
+						       (loc<>Decl_kinds.Local)
+						       (Flags.is_universe_polymorphism ())
+						       gr)))
 
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
@@ -1506,8 +1508,10 @@ let mprove_OrderedType k mind =
 			  None [] None ot None
 			  (Lemmas.mk_hook (fun loc gr ->
 					   API.Typeclasses.add_instance
-					     (API.Typeclasses.new_instance tc Hints.empty_hint_info
-									   (loc=Decl_kinds.Local) false gr)))
+					     (API.Typeclasses.new_instance
+						tc Hints.empty_hint_info
+						(loc<>Decl_kinds.Local)
+						(Flags.is_universe_polymorphism ()) gr)))
   in
   Array.iteri prove_ot mind.mind_packets
 
