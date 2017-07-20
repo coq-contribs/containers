@@ -1,3 +1,4 @@
+open API
 open Format
 open Term
 open Coqlib
@@ -13,21 +14,21 @@ let print_array f sep fin fmt a =
 let string_of_name name =
   match name with
     | Names.Anonymous -> "anonymous"
-    | Names.Name n -> Names.string_of_id n
+    | Names.Name n -> Names.Id.to_string n
 
 let print_kn fmt kn =
-  fprintf fmt "%s" (Names.string_of_con (Names.constant_of_kn kn))
+  fprintf fmt "%s" (Names.string_of_con (Names.Constant.make1 kn))
 
 let rec print_constr fmt c =
   let f = print_constr in
   match kind_of_term c with
-  | _ when c = build_coq_False () -> fprintf fmt "False"
-  | _ when c = build_coq_True () -> fprintf fmt "True"
-  | _ when c = build_coq_not () -> fprintf fmt "Not"
-  | _ when c = build_coq_or () -> fprintf fmt "Or"
-  | _ when c = build_coq_and () -> fprintf fmt "And"
+  | _ when c = Universes.constr_of_global @@ build_coq_False () -> fprintf fmt "False"
+  | _ when c = Universes.constr_of_global @@ build_coq_True () -> fprintf fmt "True"
+  | _ when c = Universes.constr_of_global @@ build_coq_not () -> fprintf fmt "Not"
+(*  | _ when c = build_coq_or () -> fprintf fmt "Or"
+  | _ when c = build_coq_and () -> fprintf fmt "And" *)
   | Rel i -> fprintf fmt "rel %d" i
-  | Var id -> fprintf fmt ("var %s") (Names.string_of_id id)
+  | Var id -> fprintf fmt ("var %s") (Names.Id.to_string id)
   | Meta _ -> fprintf fmt "meta"
   | Evar (i, constr_array) ->
       fprintf fmt "Evar : %d %a" (Evar.repr i) (print_array f " " "") constr_array
@@ -51,10 +52,10 @@ let rec print_constr fmt c =
   | Const (const, _) ->
       fprintf fmt "constante %s" (Names.string_of_con const)
   | Ind((mult_ind, i), _) ->
-      fprintf fmt "Ind (%a, %d)" print_kn (Names.user_mind mult_ind) i
+      fprintf fmt "Ind (%a, %d)" print_kn (Names.MutInd.user mult_ind) i
   | Construct (((mult_ind, i), i'), _) ->
       fprintf fmt "Constructor ((%a, %d), %d)"
-	print_kn (Names.user_mind mult_ind) i i'
+	print_kn (Names.MutInd.user mult_ind) i i'
   | Case (case_info, constr, constr', constr_array) ->
       fprintf fmt "match %a as %a with @.%a end" f constr f constr'
 	(print_array f "\n" "") constr_array
@@ -74,7 +75,7 @@ let rec print_constr fmt c =
 	name_a
 	(print_array f ", " "") type_a
 	(print_array f ", " "") constr_a
-  | Proj (p, c) -> fprintf fmt "Proj (%s, %a)" 
+  | Proj (p, c) -> fprintf fmt "Proj (%s, %a)"
     (Names.string_of_con (Names.Projection.constant p)) f c
 
 let print_ast constr_expr =

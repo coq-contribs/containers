@@ -1,7 +1,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
-open Ltac_plugin
+open API
 open Format
 open Term
 open EConstr
@@ -18,6 +18,8 @@ open Constrexpr
 open Constrexpr_ops
 open Topconstr
 open Printing
+open Ltac_plugin
+open Tacinterp
 
 DECLARE PLUGIN "containers_plugin"
 
@@ -28,7 +30,7 @@ let pr_kind = function
   | Mutual -> str "Mutual"
 
 let print_id fmt id =
-  fprintf fmt "%s" (Names.string_of_id id)
+  fprintf fmt "%s" (Names.Id.to_string id)
 
 let iter3 a a' a'' f =
   for i = 0 to (Array.length a - 1) do
@@ -47,18 +49,18 @@ let print_ind_body fmt ibody =
 	 i print_id id n print_constr typ);
     fprintf fmt "}\n"
 
-let dl id = Loc.ghost, id
+let dl id = None, id
 let cf cexpr = false, cexpr
-let cprop = CSort (Loc.ghost, Misctypes.GProp)
-let ccomparison = mkIdentC (Names.id_of_string "comparison")
+let cprop = CAst.make @@ CSort Misctypes.GProp
+let ccomparison = mkIdentC (Names.Id.of_string "comparison")
 let bin_rel_t id_t =
-  CProdN (Loc.ghost, [[(dl Names.Anonymous);(dl Names.Anonymous)],
+  CAst.make @@ CProdN ([[(dl Names.Anonymous);(dl Names.Anonymous)],
 		       Default Decl_kinds.Explicit, mkIdentC id_t], cprop)
 let bin_cmp_t id_t =
-  CProdN (Loc.ghost, [[(dl Names.Anonymous);(dl Names.Anonymous)],
+  CProdN ([[(dl Names.Anonymous);(dl Names.Anonymous)],
 		       Default Decl_kinds.Explicit, mkIdentC id_t], ccomparison)
 
-let hole = CHole (Loc.ghost, None, Misctypes.IntroAnonymous, None)
+let hole = CAst.make @@ CHole (None, Misctypes.IntroAnonymous, None)
 
 (* à la v8.2... *)
 let declare_definition
@@ -73,8 +75,8 @@ let declare_definition
 let equiv_ref =
   Libnames.Qualid (dl (Libnames.qualid_of_string "Equivalence.equiv"))
 let mk_equiv x y =
-  CApp (Loc.ghost, (None, mkRefC equiv_ref),
-(* 			 mkIdentC (Names.id_of_string "equiv")), *)
+  CApp ((None, mkRefC equiv_ref),
+(* 			 mkIdentC (Names.Id.of_string "equiv")), *)
 	[mkIdentC x, None; mkIdentC y, None])
 
 let rec app_expl_i acc base n =
@@ -96,76 +98,76 @@ let rec prod_n_i acc n =
 let eq_constr_i eqid cid carity =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Loc.ghost, (None, mkIdentC cid), ybar) in
-  CProdN (Loc.ghost,
-	  (prod_n_i [] carity) @ (Util.List.init carity
+  let cx = CAst.make @@ CApp ((None, mkIdentC cid), xbar) in
+  let cy = CAst.make @@ CApp ((None, mkIdentC cid), ybar) in
+  CAst.make @@ CProdN ((prod_n_i [] carity) @ (Util.List.init carity
 				    (fun n ->
 				      let xn = Nameops.make_ident "x" (Some (n+1)) in
 				      let yn = Nameops.make_ident "y" (Some (n+1)) in
-				      [Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, mk_equiv xn yn)),
-	  (CApp (Loc.ghost, (None, mkIdentC eqid), [cx, None; cy, None])))
+				      [None,Names.Anonymous],Default Decl_kinds.Explicit,
+				      CAst.make @@ mk_equiv xn yn)),
+	  (CAst.make @@ (CApp ((None, mkIdentC eqid), [cx, None; cy, None]))))
 let make_eq_mutual ind mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
   let lconstr =
     List.map2 (fun cid carity ->
-		 (cf (dl (add_suffix id_eq ("_"^(Names.string_of_id cid))),
+		 (cf (dl (add_suffix id_eq ("_"^(Names.Id.to_string cid))),
 		      eq_constr_i id_eq cid carity)))
       (Array.to_list body.Declarations.mind_consnames)
       (Array.to_list body.Declarations.mind_consnrealdecls)
   in
-    [((dl id_eq, None), [], Some (bin_rel_t id_t) , lconstr), []]
+    [((Loc.tag @@ id_eq, None), [], Some (bin_rel_t id_t) , lconstr), []]
 
 (* building the ordering predicate *)
 let lt_StrictOrder_ref =
   Libnames.Qualid
     (dl (Libnames.qualid_of_string "Containers.OrderedType.lt_StrictOrder"))
 let mk_lt x y =
-  CApp (Loc.ghost, (None, mkRefC lt_StrictOrder_ref),
+  CApp ((None, mkRefC lt_StrictOrder_ref),
 	[mkIdentC x, None; mkIdentC y, None])
 
 let lexi_constr ltid cid carity =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Loc.ghost, (None, mkIdentC cid), ybar) in
+  let cx = CAst.make @@ CApp ((None, mkIdentC cid), xbar) in
+  let cy = CAst.make @@ CApp ((None, mkIdentC cid), ybar) in
   let rec all_lexico_cases goal acc = function
     | 0 -> acc
     | n ->
 	let xn = Nameops.make_ident "x" (Some n) in
 	let yn = Nameops.make_ident "y" (Some n) in
-	let base = CProdN (Loc.ghost, [[Loc.ghost,Names.Anonymous],
+	let base = CAst.make @@ CProdN ([[None,Names.Anonymous],
 				       Default Decl_kinds.Explicit,
-				       mk_lt xn yn], goal) in
-	let c = CProdN (Loc.ghost, Util.List.init (n-1)
+				       CAst.make @@ mk_lt xn yn], goal) in
+	let c = CAst.make @@ CProdN (Util.List.init (n-1)
 	  (fun n ->
 	    let xn = Nameops.make_ident "x" (Some (n+1)) in
 	    let yn = Nameops.make_ident "y" (Some (n+1)) in
-	    [Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, mk_lt xn yn), base) in
-	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
+	    [None,Names.Anonymous],Default Decl_kinds.Explicit, CAst.make @@ mk_lt xn yn), base) in
+	let name = add_suffix ltid ("_"^(Names.Id.to_string cid)^
 				      "_"^(string_of_int n)) in
 	  all_lexico_cases goal ((name, c)::acc) (n-1) in
   let goal =
-    CApp (Loc.ghost, (None, mkIdentC ltid), [cx, None; cy, None]) in
+    CAst.make @@ CApp ((None, mkIdentC ltid), [cx, None; cy, None]) in
   let cases =
     all_lexico_cases goal [] carity in
     List.map (fun (name, c) ->
 		cf (dl name,
-		    CProdN (Loc.ghost, (prod_n_i [] carity), c)))
+		    CAst.make @@ CProdN ((prod_n_i [] carity), c)))
       cases
 
 let inter_constr ltid cid carity otherids otherarities =
   let xbar = app_expl_i [] "x" carity in
-  let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
+  let cx = CAst.make @@ CApp ((None, mkIdentC cid), xbar) in
   let aux id ar =
     let ybar = app_expl_i [] "y" ar in
-    let cy = CApp (Loc.ghost, (None, mkIdentC id), ybar) in
+    let cy = CAst.make @@ CApp ((None, mkIdentC id), ybar) in
     let goal =
-      CApp (Loc.ghost, (None, mkIdentC ltid), [cx, None; cy, None]) in
+      CAst.make @@ CApp ((None, mkIdentC ltid), [cx, None; cy, None]) in
     let name =
-      add_suffix ltid ("_"^(Names.string_of_id cid)^
-			 "_"^(Names.string_of_id id)) in
+      add_suffix ltid ("_"^(Names.Id.to_string cid)^
+			 "_"^(Names.Id.to_string id)) in
     let rec prod acc v = function
       | 0 -> acc
       | n -> let xn = Names.Name (Nameops.make_ident v (Some n)) in
@@ -173,7 +175,7 @@ let inter_constr ltid cid carity otherids otherarities =
     in
     let foralls1 = prod [] "y" ar in
     let foralls = prod foralls1 "x" carity in
-      cf (dl name, CProdN (Loc.ghost, foralls, goal))
+      cf (dl name, CAst.make @@ CProdN (foralls, goal))
   in
     List.map2 aux otherids otherarities
 
@@ -195,32 +197,31 @@ let make_lt_mutual ind mind body =
     [((dl id_lt, None), [], Some (bin_rel_t id_t) , lconstr), []]
 
 (* building the comparison function *)
-let ref_Eq = Libnames.Ident (dl (Names.id_of_string "Eq"))
-let ref_Lt = Libnames.Ident (dl (Names.id_of_string "Lt"))
-let ref_Gt = Libnames.Ident (dl (Names.id_of_string "Gt"))
-let id_Eq = Names.id_of_string "Eq"
-let id_Lt = Names.id_of_string "Lt"
-let id_Gt = Names.id_of_string "Gt"
+let ref_Eq = Libnames.Ident (dl (Names.Id.of_string "Eq"))
+let ref_Lt = Libnames.Ident (dl (Names.Id.of_string "Lt"))
+let ref_Gt = Libnames.Ident (dl (Names.Id.of_string "Gt"))
+let id_Eq = Names.Id.of_string "Eq"
+let id_Lt = Names.Id.of_string "Lt"
+let id_Gt = Names.Id.of_string "Gt"
 
 let compare_ref =
   Libnames.Qualid
     (dl (Libnames.qualid_of_string "Containers.OrderedType.compare"))
 let mk_cmp x y =
-  CApp (Loc.ghost, (None, mkRefC compare_ref),
+  CAst.make @@ CApp ((None, mkRefC compare_ref),
 	[mkIdentC x, None; mkIdentC y, None])
 
-let pathole = CPatAtom (Loc.ghost, None)
+let pathole = CAst.make @@ CPatAtom (None)
 let rec lholes = function
   | 0 -> []
   | n -> pathole::(lholes (n-1))
-let patc r l = CPatCstr (Loc.ghost, r, None, l)
+let patc r l = CAst.make @@ CPatCstr (r, None, l)
 let rec lpats v acc = function
   | 0 -> acc
   | n ->
-      let p = CPatAtom (Loc.ghost,
-			Some (Libnames.Ident
-				(dl (Nameops.make_ident v (Some n))))) in
-	lpats v (p::acc) (n-1)
+      let p = CAst.make @@ CPatAtom (Some (Libnames.Ident
+					     (dl (Nameops.make_ident v (Some n))))) in
+      lpats v (p::acc) (n-1)
 
 let rec lvars acc base n =
   match n with
@@ -237,27 +238,24 @@ let lexi_eqn_constr r carity =
       | x::xs, y::ys ->
 	  let item = [mk_cmp x y, None, None] in
 	  let brlt =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Lt []])],
-	     mkIdentC id_Lt) in
+	    (None,
+	     ([(Loc.tag [patc ref_Lt []])], mkIdentC id_Lt)) in
 	  let breq =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Eq []])],
-	     branch xs ys) in
+	    (None,
+	     ([(Loc.tag [patc ref_Eq []])], branch xs ys)) in
 	  let brgt =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Gt []])],
-	     mkIdentC id_Gt) in
-	    CCases (Loc.ghost, RegularStyle, None, item,
-		    [brlt; breq; brgt])
+	    (None,
+	     ([(Loc.tag [patc ref_Gt []])], mkIdentC id_Gt)) in
+	  CAst.make @@ CCases (RegularStyle, None, item,
+			       [brlt; breq; brgt])
       | _, _ -> failwith "Lists should have the same size"
   in
   let xbar = lvars [] "x" carity in
   let ybar = lvars [] "y" carity in
-    (Loc.ghost,
-     [(Loc.ghost, [patc r (lpats "x" [] carity);
-			patc r (lpats "y" [] carity)])],
-     branch xbar ybar)
+    (None,
+     ([(Loc.tag [patc r (lpats "x" [] carity);
+	patc r (lpats "y" [] carity)])],
+     branch xbar ybar))
 
 let rec branches_constr cmpid names arities =
   match names, arities with
@@ -270,13 +268,9 @@ let rec branches_constr cmpid names arities =
 	let r = Libnames.Ident (dl cid) in
 	let eqn_lexi = lexi_eqn_constr r carity in
 	let eqn_inter1 =
-	  (Loc.ghost,
-	   [(Loc.ghost, [patc r (lholes carity); pathole])],
-	   mkIdentC id_Lt) in
+	  (None, ([(Loc.tag [patc r (lholes carity); pathole])], mkIdentC id_Lt)) in
 	let eqn_inter2 =
-	  (Loc.ghost,
-	   [(Loc.ghost, [pathole; patc r (lholes carity)])],
-	   mkIdentC id_Gt) in
+	  (None, ([(Loc.tag [pathole; patc r (lholes carity)])], mkIdentC id_Gt)) in
 	  eqn_lexi::eqn_inter1::eqn_inter2::
 	    (branches_constr cmpid otherids otherars)
     | _, _ -> failwith "Lists should have the same lengths."
@@ -291,31 +285,30 @@ let make_cmp_def ind mind body =
   let items = [mkIdentC x, None, None;
 	       mkIdentC y, None, None] in
   let branches = branches_constr id_cmp names decls in
-  let body =  CCases (Loc.ghost, RegularStyle, None, items, branches) in
+  let body = CAst.make @@ CCases (RegularStyle, None, items, branches) in
   let def =
-    CLambdaN (Loc.ghost,
-	      [([dl (Names.Name x); dl (Names.Name y)],
+    CLambdaN ([([dl (Names.Name x); dl (Names.Name y)],
 		Default Decl_kinds.Explicit,
 		mkIdentC id_t)],
 	      body) in
-    id_cmp, def
+    id_cmp, CAst.make @@ def
 
 (* proving that the equality is an [Equivalence] *)
 let load_tactic s =
   Tacinterp.interp
     (Tacexpr.TacArg
-       (Loc.ghost, Tacexpr.Reference
-	  (Libnames.Ident (dl (Names.id_of_string s)))))
+       (None, Tacexpr.Reference
+	  (Libnames.Ident (dl (Names.Id.of_string s)))))
 
 let load_tactic_args s lids =
   let args =
     List.map (fun id -> Tacexpr.Reference (Libnames.Ident (dl id))) lids
   in
-    Tacinterp.interp
-      (Tacexpr.TacArg
-	 (Loc.ghost, Tacexpr.TacCall (Loc.ghost,
-			   Libnames.Ident (dl (Names.id_of_string s)),
-			   args)))
+  Tacinterp.interp
+    (Tacexpr.TacArg
+       (Loc.tag @@ Tacexpr.TacCall ( Loc.tag
+				       (Libnames.Ident (dl (Names.Id.of_string s)),
+					args))))
 
 open Tacticals
 
@@ -324,7 +317,7 @@ let lemma_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Lemma)
 
 let dummy_hook = Lemmas.mk_hook (fun _ _ -> ())
 
-let get_context ty = 
+let get_context ty =
   let env = Global.env () in
   let sigma = Evd.from_env env in
   let sigma, _ty = Typing.type_of env sigma ty in
@@ -334,11 +327,11 @@ let prove_refl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
-  let ceq = EConstr.of_constr (Universes.constr_of_reference
+  let ceq = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_eq)))) in
   let goal =
     mkNamedProd x indconstr
-      (mkApp (ceq, [| mkVar x; mkVar x |])) in
+		(mkApp (ceq, [| mkVar x; mkVar x |])) in
   let refltactic =
     load_tactic "rinductive_refl"
   in
@@ -352,7 +345,7 @@ let prove_sym indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let ceq = EConstr.of_constr (Universes.constr_of_reference
+  let ceq = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_eq)))) in
   let goal =
     mkNamedProd x indconstr
@@ -374,7 +367,7 @@ let prove_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let ceq = EConstr.of_constr (Universes.constr_of_reference
+  let ceq = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_eq)))) in
   let goal =
     mkNamedProd x indconstr
@@ -390,7 +383,7 @@ let prove_trans indconstr mind body =
     load_tactic "rinductive_trans"
   in
     Lemmas.start_proof (add_suffix id_t "_eq_trans")
-      property_kind (get_context goal) goal  dummy_hook;
+      property_kind (get_context goal) goal dummy_hook;
     ignore(Pfedit.by transtactic);
     Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
 
@@ -400,10 +393,9 @@ let prove_Equivalence indconstr mind body =
   prove_trans indconstr mind body;
   let id_t = body.Declarations.mind_typename in
   let id_equiv = add_suffix id_t "_eq_Equivalence" in
-  let equiv =
-    CApp (Loc.ghost,
-	  (None, mkIdentC (Names.id_of_string "Build_Equivalence")),
-	  [hole, None; hole, None;
+  let equiv = CAst.make @@
+    CApp ((None, mkIdentC (Names.Id.of_string "Build_Equivalence")),
+	  [hole, None;
 	   mkIdentC (add_suffix id_t "_eq_refl"), None;
 	   mkIdentC (add_suffix id_t "_eq_sym"), None;
 	   mkIdentC (add_suffix id_t "_eq_trans"), None])
@@ -413,6 +405,7 @@ let prove_Equivalence indconstr mind body =
       None [] None equiv None dummy_hook (* ; *)
 (*     Classes.declare_instance false (dl id_equiv) *)
 
+
 (* proving that the ordering is a [StrictOrder] *)
 let prove_lt_trans indconstr mind body =
   let id_t = body.Declarations.mind_typename in
@@ -421,9 +414,9 @@ let prove_lt_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let clt = EConstr.of_constr (Universes.constr_of_reference
+  let clt = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_lt)))) in
-  let ceq = EConstr.of_constr (Universes.constr_of_reference
+  let ceq = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_eq)))) in
   let prove_eq_lt_and_gt () =
     let id_eq_sym = add_suffix id_t "_eq_sym" in
@@ -490,12 +483,12 @@ let prove_lt_irrefl indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = EConstr.of_constr (Universes.constr_of_reference
+  let clt = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_lt)))) in
-  let ceq = EConstr.of_constr (Universes.constr_of_reference
+  let ceq = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_eq)))) in
-  let cfalse = EConstr.of_constr (Universes.constr_of_reference
-    (Nametab.global (Libnames.Ident (dl (Names.id_of_string "False"))))) in
+  let cfalse = EConstr.of_constr (Universes.constr_of_global
+    (Nametab.global (Libnames.Ident (dl (Names.Id.of_string "False"))))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -521,9 +514,8 @@ let prove_StrictOrder indconstr mind body =
   prove_lt_irrefl indconstr mind body;
   let id_t = body.Declarations.mind_typename in
   let id_strict = add_suffix id_t "_lt_StrictOrder" in
-  let strict =
-    CApp (Loc.ghost,
-	  (None, mkRefC build_strictorder_ref),
+  let strict = CAst.make @@
+    CApp ((None, mkRefC build_strictorder_ref),
 	  [hole, None; hole, None; hole, None;
 	   mkIdentC (add_suffix id_t "_eq_Equivalence"), None;
 	   mkIdentC (add_suffix id_t "_lt_trans"), None;
@@ -542,15 +534,15 @@ let prove_t_compare_spec indconstr mind body =
   let id_cmp = add_suffix id_t "_cmp" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = EConstr.of_constr (Universes.constr_of_reference
+  let clt = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_lt)))) in
-  let ceq = EConstr.of_constr (Universes.constr_of_reference
+  let ceq = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_eq)))) in
-  let ccmp = EConstr.of_constr (Universes.constr_of_reference
+  let ccmp = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id_cmp)))) in
-  let ccomp_spec = EConstr.of_constr (Universes.constr_of_reference
+  let ccomp_spec = EConstr.of_constr (Universes.constr_of_global
     (Nametab.global (Libnames.Ident
-		       (dl (Names.id_of_string "compare_spec"))))) in
+		       (dl (Names.Id.of_string "compare_spec"))))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -572,9 +564,11 @@ let prove_OrderedType indconstr mind body =
   prove_t_compare_spec indconstr mind body;
   let id_t = body.Declarations.mind_typename in
   let id_ot = add_suffix id_t "_OrderedType" in
-  let ot =
-    CApp (Loc.ghost,
-	  (None, mkRefC build_ot_ref),
+  let tc = Typeclasses.class_info
+	     (Coqlib.find_reference "containersplugin"
+				    ["Containers";"OrderedType"] "OrderedType") in
+  let ot = CAst.make @@
+    CApp ((None, mkRefC build_ot_ref),
 	  [hole, None; hole, None; hole, None;
 	   mkIdentC (add_suffix id_t "_eq_Equivalence"), None;
 	   mkIdentC (add_suffix id_t "_lt_StrictOrder"), None;
@@ -583,9 +577,12 @@ let prove_OrderedType indconstr mind body =
   in
     declare_definition id_ot
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-    None [] None ot None (Lemmas.mk_hook (fun loc gr ->
-		     Typeclasses.declare_instance None (loc=Decl_kinds.Local) gr))
-    
+      None [] None ot None
+      (Lemmas.mk_hook (fun loc gr ->
+		       API.Typeclasses.add_instance
+			 (API.Typeclasses.new_instance tc Hints.empty_hint_info
+						       (loc=Decl_kinds.Local) false gr)))
+
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
   let indconstr = Universes.constr_of_global gindref in
@@ -598,11 +595,11 @@ let generate_simple_ot gref =
   (* define the equality predicate *)
   let mutual_eq = make_eq_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
+  Command.do_mutual_inductive mutual_eq false false false Decl_kinds.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = make_lt_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
+  Command.do_mutual_inductive mutual_lt false false false Decl_kinds.Finite;
   (* declare the comparison function *)
   let id_cmp, ttt = make_cmp_def ind mind ibody in
     declare_definition id_cmp
@@ -638,8 +635,8 @@ let rec map3 f l1 l2 l3 =
 let req_constr_i eqid cid wp carity cmask =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Loc.ghost, (None, mkIdentC cid), ybar) in
+  let cx = CAst.make @@ CApp ((None, mkIdentC cid), xbar) in
+  let cy = CAst.make @@ CApp ((None, mkIdentC cid), ybar) in
   let rec eq_n_i acc cmask n =
     match n, cmask with
       | 0, [] -> acc
@@ -648,21 +645,21 @@ let req_constr_i eqid cid wp carity cmask =
 	  let yn = Nameops.make_ident "y" (Some n) in
 	  let t =
 	    if mask then
-	      CApp (Loc.ghost, (None, mkIdentC eqid),
+	      CApp ((None, mkIdentC eqid),
 		    [mkIdentC xn, None; mkIdentC yn, None])
 	    else
 	      mk_equiv xn yn
 	  in
 	    eq_n_i
-	      (([Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, t) :: acc)
+	      (([None,Names.Anonymous],Default Decl_kinds.Explicit, CAst.make @@ t) :: acc)
 	      cmask
 	      (n-1)
       | _, _ -> failwith "Mask does not match arity."
   in
-  CProdN (Loc.ghost, (prod_n_i [] carity) @
-    (eq_n_i [] (List.rev cmask) carity),
-	  CApp (Loc.ghost, (None, mkIdentC eqid),
-		[cx, None; cy, None]))
+  CAst.make @@ CProdN ((prod_n_i [] carity) @
+			 (eq_n_i [] (List.rev cmask) carity),
+		       CAst.make @@ CApp ((None, mkIdentC eqid),
+					  [cx, None; cy, None]))
 
 let rmake_eq_mutual ind mask mind body =
   let id_t = body.mind_typename in
@@ -670,19 +667,19 @@ let rmake_eq_mutual ind mask mind body =
   let wp = body.mind_recargs in
   let lconstr =
     map3 (fun cid carity cmask ->
-	    (cf (dl (add_suffix id_eq ("_"^(Names.string_of_id cid))),
+	    (cf (dl (add_suffix id_eq ("_"^(Names.Id.to_string cid))),
 		 req_constr_i id_eq cid wp carity cmask)))
       (Array.to_list body.mind_consnames)
       (Array.to_list body.mind_consnrealdecls)
       mask
   in
-    [((dl id_eq, None), [], Some (bin_rel_t id_t) , lconstr), []]
+    [((Loc.tag @@ id_eq, None), [], Some (bin_rel_t id_t) , lconstr), []]
 
 let rlexi_constr eqid ltid cid carity cmask =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Loc.ghost, (None, mkIdentC cid), ybar) in
+  let cx = CAst.make @@ CApp ((None, mkIdentC cid), xbar) in
+  let cy = CAst.make @@ CApp ((None, mkIdentC cid), ybar) in
   let rec one_lexico_case acc n mask = match n, mask with
     | 0, [] -> acc
     | n, mask::masks ->
@@ -690,11 +687,11 @@ let rlexi_constr eqid ltid cid carity cmask =
 	let yn = Nameops.make_ident "y" (Some n) in
 	let t =
 	  if mask then
-	    CApp (Loc.ghost, (None, mkIdentC eqid),
+	    CApp ((None, mkIdentC eqid),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_equiv xn yn in
 	one_lexico_case
-	  (([Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, t) :: acc)
+	  (([None,Names.Anonymous],Default Decl_kinds.Explicit, CAst.make @@ t) :: acc)
 	  (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
@@ -705,24 +702,24 @@ let rlexi_constr eqid ltid cid carity cmask =
 	let yn = Nameops.make_ident "y" (Some n) in
 	let t =
 	  if mask then
-	    CApp (Loc.ghost, (None, mkIdentC ltid),
+	    CApp ((None, mkIdentC ltid),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_lt xn yn in
-	let c = CProdN (Loc.ghost,
-			one_lexico_case [[Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit,t] (n-1) masks,
-			goal) in
-	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
+	let c = CAst.make @@
+		  CProdN (one_lexico_case [[None,Names.Anonymous],Default Decl_kinds.Explicit, CAst.make @@ t]
+					  (n-1) masks, goal) in
+	let name = add_suffix ltid ("_"^(Names.Id.to_string cid)^
 				      "_"^(string_of_int n)) in
 	  all_lexico_cases goal ((name, c)::acc) (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
   let goal =
-    CApp (Loc.ghost, (None, mkIdentC ltid), [cx, None; cy, None]) in
+    CAst.make @@ CApp ((None, mkIdentC ltid), [cx, None; cy, None]) in
   let cases =
     all_lexico_cases goal [] carity (List.rev cmask) in
     List.map (fun (name, c) ->
 		cf (dl name,
-		    CProdN (Loc.ghost, (prod_n_i [] carity), c)))
+		    CAst.make @@ CProdN ((prod_n_i [] carity), c)))
       cases
 
 let rec rlt_constr eqid ltid names arities mask =
@@ -745,7 +742,7 @@ let rmake_lt_mutual ind mask mind body =
 
 let mk_cmp_if cmpid x y mask =
   if mask then
-    CApp (Loc.ghost, (None, mkIdentC cmpid),
+    CAst.make @@ CApp ((None, mkIdentC cmpid),
 	  [mkIdentC x, None; mkIdentC y, None])
   else mk_cmp x y
 
@@ -755,29 +752,26 @@ let rlexi_eqn_constr r cmpid carity cmask =
       | [], [], [] -> mkIdentC id_Eq
       | [x], [y], [mask] -> mk_cmp_if cmpid x y mask
       | x::xs, y::ys, mask::masks ->
-	  let item = [mk_cmp_if cmpid x y mask, None, None] in
-	  let brlt =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Lt []])],
-	     mkIdentC id_Lt) in
-	  let breq =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Eq []])],
-	     branch xs ys masks) in
-	  let brgt =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Gt []])],
-	     mkIdentC id_Gt) in
-	    CCases (Loc.ghost, RegularStyle, None, item,
-		    [brlt; breq; brgt])
+	 let item = [mk_cmp_if cmpid x y mask, None, None] in
+	 let brlt =
+	   (None,
+	    ([(Loc.tag [patc ref_Lt []])], mkIdentC id_Lt)) in
+	 let breq =
+	   (None,
+	    ([(Loc.tag [patc ref_Eq []])], branch xs ys masks)) in
+	 let brgt =
+	   (None,
+	    ([(Loc.tag [patc ref_Gt []])], mkIdentC id_Gt)) in
+	 CAst.make @@ CCases (RegularStyle, None, item,
+			      [brlt; breq; brgt])
       | _, _, _ -> failwith "Lists should have the same size"
   in
   let xbar = lvars [] "x" carity in
   let ybar = lvars [] "y" carity in
-    (Loc.ghost,
-     [(Loc.ghost, [patc r (lpats "x" [] carity);
+    (None,
+     ([(Loc.tag @@ [patc r (lpats "x" [] carity);
 			patc r (lpats "y" [] carity)])],
-     branch xbar ybar cmask)
+     branch xbar ybar cmask))
 
 let rec rbranches_constr cmpid names arities mask =
   match names, arities, mask with
@@ -790,13 +784,13 @@ let rec rbranches_constr cmpid names arities mask =
 	let r = Libnames.Ident (dl cid) in
 	let eqn_lexi = rlexi_eqn_constr r cmpid carity cmask in
 	let eqn_inter1 =
-	  (Loc.ghost,
-	   [(Loc.ghost, [patc r (lholes carity); pathole])],
-	   mkIdentC id_Lt) in
+	  (None,
+	   ([(Loc.tag [patc r (lholes carity); pathole])],
+	   mkIdentC id_Lt)) in
 	let eqn_inter2 =
-	  (Loc.ghost,
-	   [(Loc.ghost, [pathole; patc r (lholes carity)])],
-	   mkIdentC id_Gt) in
+	  (None,
+	   ([(Loc.tag [pathole; patc r (lholes carity)])],
+	   mkIdentC id_Gt)) in
 	  eqn_lexi::eqn_inter1::eqn_inter2::
 	    (rbranches_constr cmpid otherids otherars othermasks)
     | _, _, _ -> failwith "Lists should have the same lengths."
@@ -811,26 +805,35 @@ let rmake_cmp_def ind mask mind body =
   let items = [mkIdentC x, None, None;
 	       mkIdentC y, None, None] in
   let branches = rbranches_constr id_cmp names decls mask in
-  let body =  CCases (Loc.ghost, RegularStyle, None, items, branches) in
+  let body =  CAst.make @@ CCases (RegularStyle, None, items, branches) in
     ((dl id_cmp, None), (None, Constrexpr.CStructRec),
      [CLocalAssum([dl (Names.Name x); dl (Names.Name y)],
 		    Default Decl_kinds.Explicit, mkIdentC id_t)],
      ccomparison,
      Some body)
 
+
+
+let dest_subterms p =
+  let (ra,cstrs) = Rtree.dest_node p in
+  assert (match ra with Norec -> false | _ -> true);
+  Array.map (fun t -> Array.to_list (snd (Rtree.dest_node t))) cstrs
+
 let make_mask body =
   let wp = body.mind_recargs in
-  let f p = Rtree.eq_rtree (=) p wp in
+  let f p = Rtree.equal (=) p wp in
     List.map (List.map f) (Array.to_list (dest_subterms wp))
 
 let generate_rec_ot gref =
   let gindref = Nametab.global gref in
   let indconstr = Universes.constr_of_global gindref in
   let indeconstr = EConstr.of_constr indconstr in
-    (* retrieve the inductive type *)
-  let (ind, _) =
-    Inductive.find_rectype (Global.env ()) indconstr in
-  let (mind, ibody) = Global.lookup_inductive (fst ind) in
+  (* retrieve the inductive type *)
+  let env = Global.env () in
+  let evd = Evd.from_env env in
+  let ind =
+    Inductiveops.find_rectype env evd (EConstr.of_constr indconstr) in
+  let (mind, ibody) = Global.lookup_inductive (Globnames.destIndRef gindref) in
     fprintf std_formatter "%a" print_ind_body ibody;
   let pptree = Rtree.pp_tree print_recarg ibody.Declarations.mind_recargs in
     if_verbose Feedback.msg_notice pptree;
@@ -846,11 +849,11 @@ let generate_rec_ot gref =
   (* define the equality predicate *)
   let mutual_eq = rmake_eq_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
+  Command.do_mutual_inductive mutual_eq false false false Decl_kinds.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = rmake_lt_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
+  Command.do_mutual_inductive mutual_lt false false false Decl_kinds.Finite;
   (* declare the comparison function *)
   let fexpr = rmake_cmp_def ind mask mind ibody in
   Command.do_fixpoint Decl_kinds.Global false [(fexpr, [])];
@@ -864,7 +867,7 @@ let generate_rec_ot gref =
 open Declarations
 
 let c_of_id id =
-  Universes.constr_of_reference
+  Universes.constr_of_global
     (Nametab.global (Libnames.Ident (dl id)))
 
 exception FoundEqual of int
@@ -885,8 +888,8 @@ let make_masks mind =
 let meq_constr_i eqid eqids cid carity (cmask : int list) =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Loc.ghost, (None, mkIdentC cid), ybar) in
+  let cx = CAst.make @@ CApp ((None, mkIdentC cid), xbar) in
+  let cy = CAst.make @@ CApp ((None, mkIdentC cid), ybar) in
   let rec eq_n_i acc cmask n =
     match n, cmask with
       | 0, [] -> acc
@@ -895,21 +898,21 @@ let meq_constr_i eqid eqids cid carity (cmask : int list) =
 	  let yn = Nameops.make_ident "y" (Some n) in
 	  let t =
 	    if mask >= 0 then
-	      CApp (Loc.ghost, (None, mkIdentC eqids.(mask)),
+	      CApp ((None, mkIdentC eqids.(mask)),
 		    [mkIdentC xn, None; mkIdentC yn, None])
 	    else
 	      mk_equiv xn yn
 	  in
 	    eq_n_i
-	      (([dl Names.Anonymous],Default Decl_kinds.Explicit, t) :: acc)
+	      (([dl Names.Anonymous],Default Decl_kinds.Explicit, CAst.make @@ t) :: acc)
 	      cmask
 	      (n-1)
       | _, _ -> failwith "Mask does not match arity."
   in
-  CProdN (Loc.ghost, (prod_n_i [] carity) @
-    (eq_n_i [] (List.rev cmask) carity),
-	  (CApp (Loc.ghost, (None, mkIdentC eqid),
-		 [cx, None; cy, None])))
+  CAst.make @@ CProdN ((prod_n_i [] carity) @
+			 (eq_n_i [] (List.rev cmask) carity),
+		       CAst.make @@ (CApp ((None, mkIdentC eqid),
+					   [cx, None; cy, None])))
 
 let mmake_eq_mutual ind (masks : int list list array) mind =
   let ids = Array.map (fun b -> b.mind_typename) mind.mind_packets in
@@ -921,7 +924,7 @@ let mmake_eq_mutual ind (masks : int list list array) mind =
 	 let mask = masks.(i) in
 	   map3 (fun cid carity cmask ->
 		   (cf (dl (add_suffix id_eq
-			      ("_"^(Names.string_of_id cid))),
+			      ("_"^(Names.Id.to_string cid))),
 			meq_constr_i id_eq ids_eq cid carity cmask)))
 	     (Array.to_list body.mind_consnames)
 	     (Array.to_list body.mind_consnrealdecls)
@@ -934,100 +937,103 @@ let mmake_eq_mutual ind (masks : int list list array) mind =
 		     [])
 	 lconstrs)
 
+let do_proofs env evd goals tac =
+  let _ = List.map (fun (name,goal) ->
+	    Lemmas.start_proof name property_kind evd goal dummy_hook;
+	    ignore(Pfedit.by tac);
+	    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+	   ) goals in ()
+
+
 let mprove_refl k ids ids_eq mind =
+  let env = Global.env () in
+  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    CProdN (Loc.ghost,
-	    [[dl (Names.Name x)],
-	     Default Decl_kinds.Explicit,
-	     mkIdentC ids.(i)],
-	    mkAppC (ceq i, [mkIdentC x; mkIdentC x])) in
+    Constrintern.interp_constr_evars env evd
+      (CAst.make @@ (CProdN ([[dl (Names.Name x)],
+			      Default Decl_kinds.Explicit,
+			      mkIdentC ids.(i)],
+			     mkAppC (ceq i, [mkIdentC x; mkIdentC x])))) in
   let goals =
     Array.to_list (Array.mapi
-		     (fun i id_eq ->
-			(Some (dl (add_suffix id_eq "_refl"), None),
-			 ([], goal i))) ids_eq) in
+		     (fun i id_eq -> (add_suffix id_eq "_refl", goal i))
+		     ids_eq) in
   let refltactic =
     load_tactic (match k with
 		   | Simple -> "inductive_refl"
 		   | Recursive -> "rinductive_refl"
 		   | Mutual -> "minductive_refl")
   in
-    Lemmas.start_proof_com property_kind
-      goals dummy_hook;
-    for i = 1 to mind.mind_ntypes do
-      ignore(Pfedit.by refltactic)
-    done;
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+  do_proofs env !evd goals refltactic
+
+
 
 let mprove_sym k ids ids_eq mind =
+  let env = Global.env () in
+  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    CProdN (Loc.ghost,
-	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Decl_kinds.Explicit,
-	     mkIdentC ids.(i);
-	     [Loc.ghost, Names.Anonymous],
-	     Default Decl_kinds.Explicit,
-	     mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
-	    mkAppC (ceq i, [mkIdentC y; mkIdentC x])) in
+    Constrintern.interp_constr_evars
+      env evd
+      (CAst.make @@
+	 CProdN ([[dl (Names.Name x); dl (Names.Name y)],
+		  Default Decl_kinds.Explicit,
+		  mkIdentC ids.(i);
+		  [None, Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
+		 mkAppC (ceq i, [mkIdentC y; mkIdentC x]))) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
-			(Some (dl (add_suffix id_eq "_sym"), None),
-			 ([], goal i))) ids_eq) in
+			(add_suffix id_eq "_sym", goal i)) ids_eq) in
   let symtactic =
     load_tactic (match k with
 		   | Simple -> "inductive_sym"
 		   | Recursive -> "rinductive_sym"
 		   | Mutual -> "minductive_sym")
   in
-    Lemmas.start_proof_com property_kind
-      goals dummy_hook;
-    for i = 1 to mind.mind_ntypes do
-      ignore(Pfedit.by symtactic)
-    done;
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+  do_proofs env !evd goals symtactic
+
 
 let mprove_trans k ids ids_eq mind =
+  let env = Global.env () in
+  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
   let ceq i = mkIdentC ids_eq.(i) in
   let goal i =
-    CProdN (Loc.ghost,
-	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	     Default Decl_kinds.Explicit,
-	     mkIdentC ids.(i);
-	     [Loc.ghost, Names.Anonymous],
-	     Default Decl_kinds.Explicit,
-	     mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
-	     [Loc.ghost, Names.Anonymous],
-	     Default Decl_kinds.Explicit,
-	     mkAppC (ceq i, [mkIdentC y; mkIdentC z])],
-	    mkAppC (ceq i, [mkIdentC x; mkIdentC z])) in
+    Constrintern.interp_constr_evars
+      env evd
+      (CAst.make @@
+	 CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
+		  Default Decl_kinds.Explicit,
+		  mkIdentC ids.(i);
+		  [None, Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+		  [None, Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (ceq i, [mkIdentC y; mkIdentC z])],
+		 mkAppC (ceq i, [mkIdentC x; mkIdentC z]))) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_eq ->
-			(Some (dl (add_suffix id_eq "_trans"), None),
-			 ([], goal i))) ids_eq) in
+			(add_suffix id_eq "_trans", goal i)) ids_eq) in
   let transtactic =
     load_tactic (match k with
 		   | Simple -> "inductive_trans"
 		   | Recursive -> "rinductive_trans"
 		   | Mutual -> "minductive_trans")
   in
-    Lemmas.start_proof_com property_kind
-      goals dummy_hook;
-    for i = 1 to mind.mind_ntypes do
-      ignore(Pfedit.by transtactic)
-    done;
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+  do_proofs env !evd goals transtactic
 
-let mkARefC id = None, Libnames.Ident (Loc.ghost, id), None
+let mkARefC id = None, Libnames.Ident (None, id), None
 
 let mprove_Equivalence k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
@@ -1037,12 +1043,11 @@ let mprove_Equivalence k mind =
     mprove_sym k ids ids_eq mind;
     mprove_trans k ids ids_eq mind;
   let equiv i =
-    CAppExpl (Loc.ghost,
-	  (mkARefC (Names.id_of_string "Build_Equivalence")),
-	  [hole; hole;
-	   mkIdentC (add_suffix ids.(i) "_eq_refl");
-	   mkIdentC (add_suffix ids.(i) "_eq_sym");
-	   mkIdentC (add_suffix ids.(i) "_eq_trans")])
+    CAst.make @@ CAppExpl ((mkARefC (Names.Id.of_string "Build_Equivalence")),
+			   [hole; hole;
+			    mkIdentC (add_suffix ids.(i) "_eq_refl");
+			    mkIdentC (add_suffix ids.(i) "_eq_sym");
+			    mkIdentC (add_suffix ids.(i) "_eq_trans")])
   in
     Array.iteri (fun i id_equiv ->
 		   declare_definition id_equiv
@@ -1053,8 +1058,8 @@ let mprove_Equivalence k mind =
 let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
   let xbar = app_expl_i [] "x" carity in
   let ybar = app_expl_i [] "y" carity in
-  let cx = CApp (Loc.ghost, (None, mkIdentC cid), xbar) in
-  let cy = CApp (Loc.ghost, (None, mkIdentC cid), ybar) in
+  let cx = CAst.make @@ CApp ((None, mkIdentC cid), xbar) in
+  let cy = CAst.make @@ CApp ((None, mkIdentC cid), ybar) in
   let rec one_lexico_case acc n mask = match n, mask with
     | 0, [] -> acc
     | n, mask::masks ->
@@ -1062,11 +1067,11 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
 	let yn = Nameops.make_ident "y" (Some n) in
 	let t =
 	  if mask >= 0 then
-	    CApp (Loc.ghost, (None, mkIdentC ids_eq.(mask)),
+	    CApp ((None, mkIdentC ids_eq.(mask)),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_equiv xn yn in
 	one_lexico_case
-	  (([Loc.ghost,Names.Anonymous],Default Decl_kinds.Explicit, t) :: acc)
+	  (([None,Names.Anonymous],Default Decl_kinds.Explicit, CAst.make @@ t) :: acc)
 	  (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
@@ -1077,24 +1082,23 @@ let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
 	let yn = Nameops.make_ident "y" (Some n) in
 	let t =
 	  if mask >= 0 then
-	    CApp (Loc.ghost, (None, mkIdentC ids_lt.(mask)),
+	    CApp ((None, mkIdentC ids_lt.(mask)),
 		  [mkIdentC xn, None; mkIdentC yn, None])
 	  else mk_lt xn yn in
-	let c = CProdN (Loc.ghost,
-			one_lexico_case [[dl Names.Anonymous],Default Decl_kinds.Explicit, t] (n-1) masks,
+	let c = CAst.make @@ CProdN (one_lexico_case [[dl Names.Anonymous],Default Decl_kinds.Explicit, CAst.make @@ t] (n-1) masks,
 			goal) in
-	let name = add_suffix ltid ("_"^(Names.string_of_id cid)^
+	let name = add_suffix ltid ("_"^(Names.Id.to_string cid)^
 				      "_"^(string_of_int n)) in
 	  all_lexico_cases goal ((name, c)::acc) (n-1) masks
     | _, _ -> failwith "Mask does not match arity."
   in
   let goal =
-    CApp (Loc.ghost, (None, mkIdentC ltid), [cx, None; cy, None]) in
+    CAst.make @@ CApp ((None, mkIdentC ltid), [cx, None; cy, None]) in
   let cases =
     all_lexico_cases goal [] carity (List.rev cmask) in
     List.map (fun (name, c) ->
 		cf (dl name,
-		    CProdN (Loc.ghost, (prod_n_i [] carity), c)))
+		    CAst.make @@ CProdN ((prod_n_i [] carity), c)))
       cases
 
 let rec mlt_constr ids_eq ids_lt ltid names arities mask =
@@ -1131,42 +1135,44 @@ open Stdarg
 
 let apply_tactic s tacs =
   Tacexpr.TacArg
-    (Loc.ghost, Tacexpr.TacCall (Loc.ghost,
-		      Libnames.Ident (dl (Names.id_of_string s)),
-		      List.map (fun t -> Tacexpr.Tacexp t) tacs))
+    (Loc.tag @@ Tacexpr.TacCall (Loc.tag
+				   (Libnames.Ident (dl (Names.Id.of_string s)),
+				    List.map (fun t -> Tacexpr.Tacexp t) tacs)))
 
 let seq_eapply lids : raw_tactic_expr =
   let b = Nameops.make_ident "__B" None in
   let apply id =
-    TacAtom (Loc.ghost,
+    TacAtom (Loc.tag @@
 	     TacApply (true, false,
 		       [(None, (mkIdentC id,
 			 Misctypes.ImplicitBindings [mkIdentC b]))],
 		       None))
   in
-    TacFun ([Name b], TacFirst (List.map apply lids))
+    TacFun ([Names.Name b], TacFirst (List.map apply lids))
 
 let seq_eapply_sym lids lsyms : raw_tactic_expr =
   let b = Nameops.make_ident "__B" None in
   let apply_with_sym id idsym =
     TacThens(
-      TacAtom (Loc.ghost,
+      TacAtom (Loc.tag @@
 	       TacApply (true, false,
 			 [(None, (mkIdentC id,
 			   Misctypes.ImplicitBindings [mkIdentC b]))],
 			 None)),
       [
-	TacAtom (Loc.ghost,
+	TacAtom (Loc.tag @@
 		 TacApply (true, false,
 			   [(None, (mkIdentC idsym, Misctypes.NoBindings))],
 			   None));
 	TacId []
       ])
   in
-    TacFun ([Name b], TacFirst (List.map2 apply_with_sym lids lsyms))
+    TacFun ([Names.Name b], TacFirst (List.map2 apply_with_sym lids lsyms))
 
 
 let mprove_lt_trans k ids ids_eq ids_lt mind =
+  let env = Global.env () in
+  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
@@ -1191,84 +1197,78 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 	   (mkIdentC (add_suffix id_eq "_sym"))::
 	     (mkIdentC (add_suffix id_eq "_trans"))::acc
 	) [] ids_eq in
-	       TacML (Loc.ghost, eauto,
-			  [TacGeneric (in_gen (rawwit (wit_opt wit_int_or_var)) None);
-			   TacGeneric (in_gen (rawwit (wit_opt wit_int_or_var)) None);
+	       TacML (Loc.tag @@ (eauto,
+			  [TacGeneric (in_gen (rawwit (wit_opt Stdarg.wit_int_or_var)) None);
+			   TacGeneric (in_gen (rawwit (wit_opt Stdarg.wit_int_or_var)) None);
 			   TacGeneric (in_gen (rawwit G_auto.wit_auto_using) lems);
-			   TacGeneric (in_gen (rawwit G_auto.wit_hintbases) (Some []))])
+			   TacGeneric (in_gen (rawwit G_auto.wit_hintbases) (Some []))
+			   ]))
   in
   let prove_eq_lt_and_gt () =
     let lemma_eq_lt i =
-      CProdN (Loc.ghost,
-	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	       Default Decl_kinds.Explicit,
-	       mkIdentC ids.(i);
-	       [Loc.ghost,Names.Anonymous],
-	       Default Decl_kinds.Explicit,
-	       mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
-	       [Loc.ghost,Names.Anonymous],
-	       Default Decl_kinds.Explicit,
-	       mkAppC (clt i, [mkIdentC x; mkIdentC z])],
-	      mkAppC (clt i, [mkIdentC y; mkIdentC z])) in
+      Constrintern.interp_constr_evars
+      env evd
+      (CAst.make @@
+	 CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
+		  Default Decl_kinds.Explicit,
+		  mkIdentC ids.(i);
+		  [None,Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+		  [None,Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (clt i, [mkIdentC x; mkIdentC z])],
+		 mkAppC (clt i, [mkIdentC y; mkIdentC z]))) in
     let lemma_eq_gt i =
-      CProdN (Loc.ghost,
-	      [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	       Default Decl_kinds.Explicit,
-	       mkIdentC ids.(i);
-	       [Loc.ghost,Names.Anonymous],
-	       Default Decl_kinds.Explicit,
-	       mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
-	       [Loc.ghost,Names.Anonymous],
-	       Default Decl_kinds.Explicit,
-	       mkAppC (clt i, [mkIdentC z; mkIdentC x])],
-	      mkAppC (clt i, [mkIdentC z; mkIdentC y])) in
+      Constrintern.interp_constr_evars
+      env evd
+      (CAst.make @@
+	 CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
+		  Default Decl_kinds.Explicit,
+		  mkIdentC ids.(i);
+		  [None,Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (ceq i, [mkIdentC x; mkIdentC y]);
+		  [None,Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (clt i, [mkIdentC z; mkIdentC x])],
+		 mkAppC (clt i, [mkIdentC z; mkIdentC y]))) in
     let lemmas_eq_lt =
       Array.to_list (Array.mapi
 		       (fun i id ->
-			  (Some (dl (add_suffix id "_lt"), None),
-			   ([], lemma_eq_lt i))) ids_eq) in
+			  (add_suffix id "_lt", lemma_eq_lt i)) ids_eq) in
     let eqlttactic =
       Tacinterp.interp (apply_tactic "minductive_eq_lt_gt"
 			  [apply_tactic "msolve_eq_lt" [solve_arg]]) in
     let lemmas_eq_gt =
       Array.to_list (Array.mapi
 		       (fun i id ->
-			  (Some (dl (add_suffix id "_gt"), None),
-			   ([], lemma_eq_gt i))) ids_eq) in
+			  (add_suffix id "_gt", lemma_eq_gt i)) ids_eq) in
     let eqgttactic =
       Tacinterp.interp (apply_tactic "minductive_eq_lt_gt"
 			  [apply_tactic "msolve_eq_gt" [solve_arg]])
     in
-    Lemmas.start_proof_com property_kind
-      lemmas_eq_lt dummy_hook;
-      for i = 1 to mind.mind_ntypes do
-	Pfedit.by eqlttactic;
-      done;
-      Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None));
-    Lemmas.start_proof_com property_kind
-      lemmas_eq_gt dummy_hook;
-    for i = 1 to mind.mind_ntypes do
-      Pfedit.by eqgttactic
-    done;
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+    do_proofs env !evd lemmas_eq_lt eqlttactic;
+    do_proofs env !evd lemmas_eq_gt eqgttactic
   in
   let goal i =
-    CProdN (Loc.ghost,
-	    [[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
-	     Default Decl_kinds.Explicit,
-	     mkIdentC ids.(i);
-	     [Loc.ghost,Names.Anonymous],
-	     Default Decl_kinds.Explicit,
-	     mkAppC (clt i, [mkIdentC x; mkIdentC y]);
-	     [Loc.ghost,Names.Anonymous],
-	     Default Decl_kinds.Explicit,
-	     mkAppC (clt i, [mkIdentC y; mkIdentC z])],
-	    mkAppC (clt i, [mkIdentC x; mkIdentC z])) in
+    Constrintern.interp_constr_evars
+      env evd
+      (CAst.make @@
+	 CProdN ([[dl (Names.Name x); dl (Names.Name y); dl (Names.Name z)],
+		  Default Decl_kinds.Explicit,
+		  mkIdentC ids.(i);
+		  [None,Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (clt i, [mkIdentC x; mkIdentC y]);
+		  [None,Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (clt i, [mkIdentC y; mkIdentC z])],
+		 mkAppC (clt i, [mkIdentC x; mkIdentC z]))) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id_lt ->
-			(Some (dl (add_suffix id_lt "_trans"), None),
-			 ([], goal i))) ids_lt) in
+			(add_suffix id_lt "_trans", goal i)) ids_lt) in
   let transtactic =
     match k with
       | Simple -> load_tactic "inductive_lexico_trans"
@@ -1289,46 +1289,39 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 			      [strans; seqgt; seqlt])
   in
   if k = Simple then () else prove_eq_lt_and_gt ();
-  Lemmas.start_proof_com property_kind
-    goals dummy_hook;
-  for i = 1 to mind.mind_ntypes do
-    Pfedit.by transtactic
-  done;
-  Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+  do_proofs env !evd goals transtactic
 
 let mprove_lt_irrefl k ids ids_eq ids_lt mind =
+  let env = Global.env () in
+  let evd = ref (Evd.from_env env) in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let clt i = mkIdentC ids_lt.(i) in
   let ceq i = mkIdentC ids_eq.(i) in
-  let cfalse = mkIdentC (Names.id_of_string "False") in
+  let cfalse = mkIdentC (Names.Id.of_string "False") in
   let goal i =
-    CProdN (Loc.ghost,
-	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Decl_kinds.Explicit,
-	     mkIdentC ids.(i);
-	     [Loc.ghost,Names.Anonymous],
-	     Default Decl_kinds.Explicit,
-	     mkAppC (clt i, [mkIdentC x; mkIdentC y]);
-	     [Loc.ghost,Names.Anonymous],
-	     Default Decl_kinds.Explicit,
-	     mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
-	    cfalse) in
+    Constrintern.interp_constr_evars
+      env evd
+      (CAst.make @@
+	 CProdN ([[dl (Names.Name x); dl (Names.Name y)],
+		  Default Decl_kinds.Explicit,
+		  mkIdentC ids.(i);
+		  [None,Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (clt i, [mkIdentC x; mkIdentC y]);
+		  [None,Names.Anonymous],
+		  Default Decl_kinds.Explicit,
+		  mkAppC (ceq i, [mkIdentC x; mkIdentC y])],
+		 cfalse)) in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id ->
-			(Some (dl (add_suffix id "_irrefl"), None),
-			 ([], goal i))) ids_lt) in
+			(add_suffix id "_irrefl",goal i)) ids_lt) in
   let irrefltactic =
     load_tactic (if k = Simple then "inductive_irrefl"
 		 else "minductive_irrefl")
   in
-  Lemmas.start_proof_com property_kind
-    goals dummy_hook;
-  for i = 1 to mind.mind_ntypes do
-    Pfedit.by irrefltactic
-  done;
-  Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+  do_proofs env !evd goals irrefltactic
 
 let mprove_StrictOrder k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
@@ -1339,7 +1332,7 @@ let mprove_StrictOrder k mind =
   mprove_lt_irrefl k ids ids_eq ids_lt mind;
   mprove_lt_trans k ids ids_eq ids_lt mind;
   let strict i =
-    CAppExpl (Loc.ghost,
+    CAppExpl (
 	  (None, build_strictorder_ref, None),
 	  [hole; hole; hole;
 	   mkIdentC ids_equiv.(i);
@@ -1349,13 +1342,13 @@ let mprove_StrictOrder k mind =
   Array.iteri (fun i id_order ->
 		 declare_definition id_order
 		   (Decl_kinds.Global, false, Decl_kinds.Definition)
-		   None [] None (strict i) None dummy_hook)
+		   None [] None (CAst.make (strict i)) None dummy_hook)
     ids_order
 
 let mmk_cmp_if ids_cmp x y mask =
   if mask >= 0 then
-    CApp (Loc.ghost, (None, mkIdentC ids_cmp.(mask)),
-	  [mkIdentC x, None; mkIdentC y, None])
+    CAst.make @@ CApp ((None, mkIdentC ids_cmp.(mask)),
+		       [mkIdentC x, None; mkIdentC y, None])
   else mk_cmp x y
 
 let mlexi_eqn_constr r ids_cmp carity cmask =
@@ -1366,27 +1359,27 @@ let mlexi_eqn_constr r ids_cmp carity cmask =
       | x::xs, y::ys, mask::masks ->
 	  let item = [mmk_cmp_if ids_cmp x y mask, None, None] in
 	  let brlt =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Lt []])],
-	     mkIdentC id_Lt) in
+	    (None,
+	     ([(Loc.tag @@ [patc ref_Lt []])],
+	      mkIdentC id_Lt)) in
 	  let breq =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Eq []])],
-	     branch xs ys masks) in
+	    (None,
+	     ([(Loc.tag @@ [patc ref_Eq []])],
+	      branch xs ys masks)) in
 	  let brgt =
-	    (Loc.ghost,
-	     [(Loc.ghost, [patc ref_Gt []])],
-	     mkIdentC id_Gt) in
-	    CCases (Loc.ghost, RegularStyle, None, item,
-		    [brlt; breq; brgt])
+	    (None,
+	     ([(Loc.tag @@ [patc ref_Gt []])],
+	      mkIdentC id_Gt)) in
+	    CAst.make @@ CCases (RegularStyle, None, item,
+				 [brlt; breq; brgt])
       | _, _, _ -> failwith "Lists should have the same size"
   in
   let xbar = lvars [] "x" carity in
   let ybar = lvars [] "y" carity in
-    (Loc.ghost,
-     [(Loc.ghost, [patc r (lpats "x" [] carity);
-			patc r (lpats "y" [] carity)])],
-     branch xbar ybar cmask)
+    (None,
+     ([(Loc.tag [patc r (lpats "x" [] carity);
+		 patc r (lpats "y" [] carity)])],
+      branch xbar ybar cmask))
 
 let rec mbranches_constr ids_cmp names arities mask =
   match names, arities, mask with
@@ -1399,13 +1392,13 @@ let rec mbranches_constr ids_cmp names arities mask =
 	let r = Libnames.Ident (dl cid) in
 	let eqn_lexi = mlexi_eqn_constr r ids_cmp carity cmask in
 	let eqn_inter1 =
-	  (Loc.ghost,
-	   [(Loc.ghost, [patc r (lholes carity); pathole])],
-	   mkIdentC id_Lt) in
+	  (None,
+	   ([(Loc.tag [patc r (lholes carity); pathole])],
+	   mkIdentC id_Lt)) in
 	let eqn_inter2 =
-	  (Loc.ghost,
-	   [(Loc.ghost, [pathole; patc r (lholes carity)])],
-	   mkIdentC id_Gt) in
+	  (None,
+	   ([(Loc.tag [pathole; patc r (lholes carity)])],
+	   mkIdentC id_Gt)) in
 	  eqn_lexi::eqn_inter1::eqn_inter2::
 	    (mbranches_constr ids_cmp otherids otherars othermasks)
     | _, _, _ -> failwith "Lists should have the same lengths."
@@ -1421,7 +1414,7 @@ let mmake_cmp_def k ind masks mind =
     let items = [mkIdentC x, None, None;
 		 mkIdentC y, None, None] in
     let branches = mbranches_constr ids_cmp names decls masks.(i) in
-    CCases (Loc.ghost, RegularStyle, None, items, branches)
+    CAst.make @@ CCases (RegularStyle, None, items, branches)
   in
   let make_block i body =
     ((dl ids_cmp.(i), None), (None, Constrexpr.CStructRec),
@@ -1433,15 +1426,14 @@ let mmake_cmp_def k ind masks mind =
   match k with
     | Simple ->
 	let def =
-	  CLambdaN (Loc.ghost,
-		    [([dl (Names.Name x); dl (Names.Name y)],
+	  CLambdaN ([([dl (Names.Name x); dl (Names.Name y)],
 		      Default Decl_kinds.Explicit,
 		      mkIdentC ids.(0))],
 		    make_body 0 mind.mind_packets.(0))
 	in
 	  declare_definition ids_cmp.(0)
 	    (Decl_kinds.Global, false, Decl_kinds.Definition)
-	    None [] None def None dummy_hook
+	    None [] None (CAst.make def) None dummy_hook
     | Recursive | Mutual ->
 	let defs =
 	  Array.to_list (Array.mapi
@@ -1450,7 +1442,7 @@ let mmake_cmp_def k ind masks mind =
 	in
 	Command.do_fixpoint Decl_kinds.Global false defs
 
-let using_sym =
+let using_sym ?loc =
   let name = {
     mltac_plugin = "containers_plugin";
     mltac_tactic = "using_sym";
@@ -1461,20 +1453,23 @@ let using_sym =
   } in
   let tac args _ =
     let map v =
-      let id = Tacinterp.Value.cast (topwit wit_ident) v in
-      { Tacexpr.delayed = fun _ sigma -> Sigma.here (EConstr.of_constr (Constrintern.global_reference id)) sigma }
+      let id = Tacinterp.Value.cast (topwit Stdarg.wit_ident) v in
+      (fun ist sigma -> (sigma, (EConstr.of_constr (Universes.constr_of_global (Constrintern.global_reference id)))))
     in
     let args = List.map map args in
     Auto.h_auto None args (Some [])
   in
   let () = Tacenv.register_ml_tactic name [|tac|] in
   fun ids ->
-    let map id = TacGeneric (in_gen (rawwit wit_ident) id) in
-    let ids = List.map map ids in
-    TacML (Loc.ghost, entry, ids)
+  let map id = TacGeneric (in_gen (rawwit Stdarg.wit_ident) id) in
+  let ids = List.map map ids in
+  TacML (Loc.tag (?loc:loc) (entry, ids))
+
 
 (* proving the [OrderedType] instance *)
 let mprove_compare_spec k ids mind =
+  let env = Global.env () in
+  let evd = ref (Evd.from_env env) in
   let ids_eq = Array.map (fun id_t -> add_suffix id_t "_eq") ids in
   let ids_lt = Array.map (fun id_t -> add_suffix id_t "_lt") ids in
   let ids_cmp = Array.map (fun id_t -> add_suffix id_t "_cmp") ids in
@@ -1484,36 +1479,32 @@ let mprove_compare_spec k ids mind =
   let clt i = mkIdentC (ids_lt.(i)) in
   let ceq i = mkIdentC (ids_eq.(i)) in
   let ccmp i = mkIdentC (ids_cmp.(i)) in
-  let ccomp_spec = mkIdentC (Names.id_of_string "compare_spec") in
+  let ccomp_spec = mkIdentC (Names.Id.of_string "compare_spec") in
   let goal i =
-    CProdN (Loc.ghost,
-	    [[dl (Names.Name x); dl (Names.Name y)],
-	     Default Decl_kinds.Explicit,
-	     mkIdentC ids.(i)],
-	    mkAppC (ccomp_spec,
-		    [ ceq i; clt i;
-		      mkIdentC x; mkIdentC y;
-		      (mkAppC (ccmp i, [ mkIdentC x; mkIdentC y ]))]))
+    Constrintern.interp_constr_evars
+      env evd
+      (CAst.make @@
+	 CProdN ([[dl (Names.Name x); dl (Names.Name y)],
+		  Default Decl_kinds.Explicit,
+		  mkIdentC ids.(i)],
+		 mkAppC (ccomp_spec,
+			 [ ceq i; clt i;
+			   mkIdentC x; mkIdentC y;
+			   (mkAppC (ccmp i, [ mkIdentC x; mkIdentC y ]))])))
   in
   let goals =
     Array.to_list (Array.mapi
 		     (fun i id ->
-			(Some (dl (add_suffix id "_compare_spec"), None),
-			 ([], goal i))) ids) in
+			(add_suffix id "_compare_spec", goal i)) ids) in
   let using_sym = using_sym (Array.to_list ids_sym) in
   let comparespectactic = match k with
     | Simple -> load_tactic "solve_compare_spec"
     | Recursive ->
 	load_tactic_args "rsolve_compare_spec" [ids_sym.(0)]
     | Mutual ->
-	Tacinterp.interp (apply_tactic "msolve_compare_spec" [using_sym])
+       Tacinterp.interp (apply_tactic "msolve_compare_spec" [using_sym])
   in
-  Lemmas.start_proof_com property_kind
-    goals dummy_hook;
-  for i = 1 to mind.mind_ntypes do
-    Pfedit.by comparespectactic
-  done;
-  Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+  do_proofs env !evd goals comparespectactic
 
 let mprove_OrderedType k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
@@ -1521,18 +1512,22 @@ let mprove_OrderedType k mind =
   let prove_ot i body =
     let id_ot = add_suffix ids.(i) "_OrderedType" in
     let ot =
-      CAppExpl (Loc.ghost,
-	    (None, build_ot_ref, None),
-	    [hole; hole; hole;
-	     mkIdentC (add_suffix ids.(i) "_eq_Equivalence");
-	     mkIdentC (add_suffix ids.(i) "_lt_StrictOrder");
-	     hole;
-	     mkIdentC (add_suffix ids.(i) "_compare_spec")])
-    in
-      declare_definition id_ot
-	(Decl_kinds.Global, false, Decl_kinds.Definition)
-	None [] None ot None (Lemmas.mk_hook (fun _ gr -> 
-			 Typeclasses.declare_instance None false gr))
+      CAst.make @@ CAppExpl ((None, build_ot_ref, None),
+			     [hole; hole; hole;
+			      mkIdentC (add_suffix ids.(i) "_eq_Equivalence");
+			      mkIdentC (add_suffix ids.(i) "_lt_StrictOrder");
+			      hole;
+			      mkIdentC (add_suffix ids.(i) "_compare_spec")]) in
+    let tc = Typeclasses.class_info (Coqlib.find_reference
+				       "containersplugin"
+				       ["Containers";"OrderedType"] "OrderedType")
+    in declare_definition id_ot
+			  (Decl_kinds.Global, false, Decl_kinds.Definition)
+			  None [] None ot None
+			  (Lemmas.mk_hook (fun loc gr ->
+					   API.Typeclasses.add_instance
+					     (API.Typeclasses.new_instance tc Hints.empty_hint_info
+									   (loc=Decl_kinds.Local) false gr)))
   in
   Array.iteri prove_ot mind.mind_packets
 
@@ -1542,18 +1537,20 @@ let generate_mutual_ot gref =
   let gindref = Nametab.global gref in
   let indconstr = Universes.constr_of_global gindref in
   (* retrieve the inductive type *)
-  let (ind, _) =
-    Inductive.find_rectype (Global.env ()) indconstr in
-  let (mind, _) = Global.lookup_inductive (fst ind) in
+  let env = Global.env () in
+  let evd = Evd.from_env env in
+  let ind =
+    Inductiveops.find_rectype env evd (EConstr.of_constr indconstr) in
+  let (mind, _) = Global.lookup_inductive (Globnames.destIndRef gindref) in
   let masks = make_masks mind in
-  Array.iteri (fun i mask ->
+  (*Array.iteri (fun i mask ->
 		 fprintf std_formatter "Mask %d :\n" i;
 		 List.iter
 		   (fun paths ->
 		      List.iter (fun b -> fprintf std_formatter "%d " b)
 			paths;
 		      fprintf std_formatter "\n"
-		   ) mask) masks;
+		   ) mask) masks;*)
   let kind =
     if mind.mind_ntypes > 1 then Mutual
     else
@@ -1565,12 +1562,12 @@ let generate_mutual_ot gref =
   if_verbose Feedback.msg_notice (str "Inductive kind : " ++ pr_kind kind);
   (* define the equality predicate *)
   let mutual_eq = mmake_eq_mutual ind masks mind in
-  Command.do_mutual_inductive mutual_eq false false Decl_kinds.Finite;
+  Command.do_mutual_inductive mutual_eq false false false Decl_kinds.Finite;
   (* prove the Equivalence instance *)
   mprove_Equivalence kind mind;
   (* define the strict ordering predicate *)
   let mutual_lt = mmake_lt_mutual ind masks mind in
-  Command.do_mutual_inductive mutual_lt false false Decl_kinds.Finite;
+  Command.do_mutual_inductive mutual_lt false false false Decl_kinds.Finite;
   (* prove the StrictOrder instance *)
   mprove_StrictOrder kind mind;
   (* define the comparison function *)
@@ -1581,34 +1578,16 @@ let generate_mutual_ot gref =
 let generate_ot = generate_mutual_ot
 
 let generate_scheme gref =
+  let env = Global.env () in
+  let evd = Evd.from_env env in
   let gindref = Nametab.global gref in
-  let indconstr = Universes.constr_of_global gindref in
-    (* retrieve the inductive type *)
-  let (ind, _) =
-    Inductive.find_rectype (Global.env ()) indconstr in
-  let (mind, _) = Global.lookup_inductive (fst ind) in
-  let rec lnames acc = function
-    | 0 -> acc
-    | n ->
-	let name = (mind.mind_packets.(n-1)).mind_typename in
-	  lnames (name::acc) (n-1)
-  in
-  let names = lnames [] mind.mind_ntypes in
-  let schemes =
-    List.map (fun id ->
-		let id' = dl (add_suffix id "_mutual_ind") in
-		  (Some id',
-		   Vernacexpr.InductionScheme(true, (* dependent *)
-					      Misctypes.AN
-						(Libnames.Ident (dl id)),
-					      Misctypes.GProp))
-	     ) names
-  in
-  Indschemes.do_scheme schemes
+  let (evd', indconstr) = Evarutil.new_global evd gindref in
+  let (n, _) = Ind_tables.find_scheme
+		 Elimschemes.case_dep_scheme_kind_from_prop (fst (destInd evd' indconstr))
+  in Feedback.msg_notice (Names.pr_con n ++ str " is defined.")
 
 let print_paths gref =
-  let ind = Nametab.global_inductive gref in
-  let (mind, ibody) = Global.lookup_inductive ind in
+  let (mind, ibody) = Global.lookup_inductive (Globnames.destIndRef gref) in
     if_verbose Feedback.msg_notice
       (str "Params :" ++ (int mind.mind_nparams));
     if_verbose Feedback.msg_notice
@@ -1617,12 +1596,13 @@ let print_paths gref =
       (str "Real arguments :" ++ (int ibody.mind_nrealargs));
   Array.iteri
     (fun i body ->
-       let id = Names.string_of_id body.mind_typename in
+       let id = Names.Id.to_string body.mind_typename in
        let pptree =
 	 Rtree.pp_tree print_recarg body.mind_recargs in
 	 if_verbose Feedback.msg_notice (str id);
 	 if_verbose Feedback.msg_notice pptree)
     mind.mind_packets
+
 
 (* Syntax extensions *)
 
@@ -1652,10 +1632,10 @@ END
 
 VERNAC COMMAND EXTEND GenerateScheme CLASSIFIED AS SIDEFF
  ["Generate" "Scheme" global(indref)] ->
-   [ generate_scheme indref ]
+   [ let _ = generate_scheme indref in () ]
 END
 
 VERNAC COMMAND EXTEND PrintWPaths CLASSIFIED AS QUERY
  ["Print" "Paths" global(indref)] ->
-   [ print_paths indref ]
+   [ print_paths (Nametab.global indref) ]
 END
