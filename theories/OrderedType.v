@@ -547,18 +547,15 @@ Section KeyOrderedType.
 
   Local Instance eqk_Equiv : Equivalence eqk.
   Proof.
-    constructor; repeat intro; unfold eqk in *; eauto.
-    transitivity (fst y); auto.
+    constructor; repeat intro; unfold eqk in *; eauto. order.
   Qed.
   Local Instance eqke_Equiv : Equivalence eqke.
   Proof.
-    constructor; repeat intro; unfold eqke in *; intuition.
-    transitivity (fst y); auto.
-    congruence.
+    constructor; repeat intro; unfold eqke in *; intuition; order.
   Qed.
   Local Instance ltk_SO : RelationClasses.StrictOrder ltk.
   Proof.
-    constructor; repeat intro; unfold ltk in *; intuition order. 
+    constructor; repeat intro; unfold ltk in *; intuition order.
   Qed.
   Local Instance ltk_m : Proper (eqk ==> eqk ==> iff) ltk.
   Proof.
@@ -603,8 +600,7 @@ Section KeyOrderedType.
 
   Lemma eqke_trans : forall e e' e'', eqke e e' -> eqke e' e'' -> eqke e e''.
   Proof.
-    unfold eqke; intuition; [ eauto | congruence ].
-    transitivity (fst (a0, b0)); auto.
+    unfold eqke; intuition; [ order | congruence ].
   Qed.
 
   Lemma ltk_trans : forall e e' e'', ltk e e' -> ltk e' e'' -> ltk e e''.

@@ -1542,7 +1542,7 @@ Proof.
   assert (cutsort : forall l (x a : A * B), sort KeyOrderedType.ltk l ->
     lelistA KeyOrderedType.ltk a l -> InA KeyOrderedType.eqke x l ->
     KeyOrderedType.ltk a x).
-  apply SortA_InfA_InA; try solve [intuition].
+  apply SortA_InfA_InA.
   apply KeyOrderedType.eqke_Equiv.
   constructor; repeat intro; unfold KeyOrderedType.ltk in *; order.
   intros x x' [Hx Hx'] y y' [Hy Hy']; red; simpl in *; intros; subst.

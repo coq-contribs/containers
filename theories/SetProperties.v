@@ -31,7 +31,7 @@ Proof.
   fsetdec.
 Qed.
 
-Ltac expAdd := intros; repeat rewrite Add_Equal in *.
+Ltac expAdd := repeat rewrite Add_Equal; intros.
 
 Section BasicProperties.
   Context `{HF : @FSetSpecs elt Helt F}.
@@ -246,12 +246,12 @@ Section BasicProperties.
 
   Lemma union_Equal : In x s'' -> Add x s s' -> union s s'' [=] union s' s''.
   Proof. (* expAdd; rewrite Add_Equal in H0; fsetdec. Qed.  *) (** trop lent *)
-    expAdd; rewrite Add_Equal in H0; rewrite H0; clear H0; fsetdec.
+    expAdd; rewrite H0; clear H0; fsetdec.
   Qed.
 
   Lemma inter_Add_2 : ~In x s'' -> Add x s s' -> inter s s'' [=] inter s' s''.
   Proof.
-    expAdd; rewrite Add_Equal in H0; rewrite H0; clear H0; fsetdec.
+    expAdd; rewrite H0; clear H0; fsetdec.
   Qed.
 
 End BasicProperties.

@@ -2318,7 +2318,7 @@ Section AdditionalMorphisms.
     inversion_clear Hsort; inversion_clear Hsort'.
     assert (cutsort : forall l (x a : key * elt), sort lt_key l ->
       lelistA lt_key a l -> InA eq_key_elt x l -> lt_key a x).
-    apply SortA_InfA_InA; try solve [intuition].
+    apply SortA_InfA_InA.
     apply eqke_Equiv.
     constructor; repeat intro; unfold lt_key, KeyOrderedType.ltk in *; order.
     intros x y E.
