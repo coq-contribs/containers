@@ -1180,7 +1180,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
   let ceq i = mkIdentC ids_eq.(i) in
   let eauto = {
     mltac_name = {
-      mltac_plugin = "eauto";
+      mltac_plugin = "ltac_plugin";
       mltac_tactic = "eauto";
     };
     mltac_index = 0 }
