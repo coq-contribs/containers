@@ -1,8 +1,6 @@
 Require Import SetInterface SetAVLInstance.
 Require Import SetFacts SetProperties.
 
-Unset Standard Proposition Elimination Names.
-
 Generalizable All Variables.
 
 Local Transparent set.
