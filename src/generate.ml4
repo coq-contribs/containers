@@ -1,7 +1,6 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
-open API
 open Format
 open Term
 open EConstr
@@ -579,8 +578,8 @@ let prove_OrderedType indconstr mind body =
       (Decl_kinds.Global, false, Decl_kinds.Definition)
       None [] None ot None
       (Lemmas.mk_hook (fun loc gr ->
-		       API.Typeclasses.add_instance
-			 (API.Typeclasses.new_instance tc Hints.empty_hint_info
+		       Typeclasses.add_instance
+			 (Typeclasses.new_instance tc Hints.empty_hint_info
 						       (loc<>Decl_kinds.Local)
 						       (Flags.is_universe_polymorphism ())
 						       gr)))
@@ -1507,8 +1506,8 @@ let mprove_OrderedType k mind =
 			  (Decl_kinds.Global, false, Decl_kinds.Definition)
 			  None [] None ot None
 			  (Lemmas.mk_hook (fun loc gr ->
-					   API.Typeclasses.add_instance
-					     (API.Typeclasses.new_instance
+					   Typeclasses.add_instance
+					     (Typeclasses.new_instance
 						tc Hints.empty_hint_info
 						(loc<>Decl_kinds.Local)
 						(Flags.is_universe_polymorphism ()) gr)))

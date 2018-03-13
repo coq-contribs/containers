@@ -1,7 +1,5 @@
-open API
 open Format
 open Term
-open Pp
 
 let print_array f sep fin fmt a =
   Array.iter (fun i -> fprintf fmt "%a%s" f i sep) a;
