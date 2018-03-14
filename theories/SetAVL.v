@@ -89,7 +89,7 @@ Module SetAVL.
 
     (** [create l x r] creates a node, assuming [l] and [r]
        to be balanced and [|height l - height r| <= 2]. *)
-    Notation max := Zmax.
+    Notation max := Z.max.
     Definition create l x r :=
       Node l x r (max (height l) (height r) + 1).
 

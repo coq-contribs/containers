@@ -98,7 +98,7 @@ Module MapAVL.
        to be balanced and [|height l - height r| <= 2]. *)
 
     Definition create l x e r :=
-      Node l x e r (Zmax (height l) (height r) + 1).
+      Node l x e r (Z.max (height l) (height r) + 1).
 
     (** [bal l x e r] acts as [create], but performs one step of
        rebalancing if necessary, i.e. assumes [|height l - height r| <= 3]. *)

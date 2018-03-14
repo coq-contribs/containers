@@ -102,8 +102,8 @@ Section ParamSets.
       | S n0 =>
         let z1 := next z in
         let z2 := next z1 in
-        let n1 := Zabs_nat (z1 mod (Z_of_nat size)) in
-        let n2 := Zabs_nat (z2 mod (Z_of_nat size)) in
+        let n1 := Z.abs_nat (z1 mod (Z_of_nat size)) in
+        let n2 := Z.abs_nat (z2 mod (Z_of_nat size)) in
           match nth n1 s {} =?= nth n2 s {} with
             | _ => make_compares (next z2) n0 size s
           end
