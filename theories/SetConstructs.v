@@ -1,3 +1,4 @@
+Require Recdef.
 Require Import SetInterface SetAVLInstance.
 Require Import SetFacts SetProperties.
 
@@ -248,7 +249,6 @@ Section DiagonalProduct.
 
   (* diag {} = {};
      diag {x; s} = diag s \cup {(x, a) | a \in s} si x < s *)
-  Require Import Recdef.
   Function diag_prod (s : set A) {measure cardinal} : set (A * A) :=
       match min_elt s with
         | None => {}

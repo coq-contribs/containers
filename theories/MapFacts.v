@@ -1,5 +1,6 @@
 Require Import Bool Structures.DecidableType Structures.DecidableTypeEx.
-Require Import OrderedType.
+From Containers Require Import OrderedType.
+From Containers Require OrderedTypeEx.
 Module Import K := KeyOrderedType.
 Require Import MapInterface Morphisms.
 Set Implicit Arguments.
@@ -2270,7 +2271,7 @@ End InductiveSpec.
 
 Section AdditionalMorphisms.
   Open Scope map_scope.
-  Require Import OrderedTypeEx.
+  Import OrderedTypeEx.
   (** Additional morphisms, when the value type is Ordered *)
   Context `{HF : @FMapSpecs key Hkey F}.
   Context `{elt_OT : OrderedType elt}.

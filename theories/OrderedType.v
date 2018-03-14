@@ -1,4 +1,5 @@
 Require Import Setoid Morphisms.
+Require SetoidList.
 Require Export Coq.Classes.Equivalence.
 Open Scope equiv_scope.
 
@@ -478,7 +479,7 @@ Notation "'UsualOrderedType' A" :=
    *)
 Set Implicit Arguments. Unset Strict Implicit.
 Section ForNotations.
-  Require Import SetoidList.
+  Import SetoidList.
   Notation In:=(InA _eq).
   Notation Inf:=(lelistA _lt).
   Notation Sort:=(sort _lt).
@@ -533,6 +534,7 @@ Hint Immediate @In_eq @Inf_lt.
 
 Module KeyOrderedType.
 Section KeyOrderedType.
+  Import SetoidList.
   Set Implicit Arguments.
   Unset Strict Implicit.
 
