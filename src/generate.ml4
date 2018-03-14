@@ -4,21 +4,14 @@
 open Format
 open Term
 open EConstr
-open Coqlib
-open Tacmach
-open Tacticals
-open Tactics
 open Pp
 open Flags
 
 open Nameops
-open Entries
 open Constrexpr
 open Constrexpr_ops
-open Topconstr
 open Printing
 open Ltac_plugin
-open Tacinterp
 
 DECLARE PLUGIN "containers_plugin"
 
@@ -308,8 +301,6 @@ let load_tactic_args s lids =
        (Loc.tag @@ Tacexpr.TacCall ( Loc.tag
 				       (Libnames.Ident (dl (Names.Id.of_string s)),
 					args))))
-
-open Tacticals
 
 let property_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Property)
 let lemma_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Lemma)
@@ -616,7 +607,6 @@ let generate_simple_ot gref =
 (* for recursive datatypes *)
 
 open Declarations
-open Declareops
 
 let print_ind (mind,index) =
   Printf.sprintf "(%s, %d)" (Names.string_of_mind mind) index
