@@ -178,37 +178,22 @@ Section MapDefinitions.
     end.
 End MapDefinitions.
 
-Implicit Arguments Empty [[key] [elt] [comparedec]].
-Implicit Arguments
-  empty [[key] [elt] [comparedec]].
-Implicit Arguments
-  is_empty [[key] [elt] [comparedec]].
-Implicit Arguments
-  mem [[key] [elt] [comparedec]].
-Implicit Arguments
-  find [[key] [elt] [comparedec]].
-Implicit Arguments
-  add [[key] [elt] [comparedec]].
-Implicit Arguments
-  remove [[key] [elt] [comparedec]].
-Implicit Arguments
-  insert [[key] [elt] [comparedec]].
-Implicit Arguments
-  adjust [[key] [elt] [comparedec]].
-Implicit Arguments
-  equal [[key] [elt] [comparedec]].
-Implicit Arguments
-  fold [[key] [comparedec] [elt] [A]].
-Implicit Arguments
-  elements [[key] [elt] [comparedec]].
-Implicit Arguments
-  choose [[key] [elt] [comparedec]].
-Implicit Arguments
-  map [[key] [elt] [elt'] [comparedec]].
-Implicit Arguments
-  mapi [[key] [elt] [elt'] [comparedec]].
-Implicit Arguments
-  map2 [[key] [elt] [elt'] [elt''] [comparedec]].
+Arguments Empty {key comparedec elt}.
+Arguments empty {key comparedec elt}.
+Arguments is_empty {key comparedec elt}.
+Arguments mem {key comparedec elt}.
+Arguments find {key comparedec elt}.
+Arguments add {key comparedec elt}.
+Arguments remove {key comparedec elt}.
+Arguments insert {key comparedec elt}.
+Arguments adjust {key comparedec elt}.
+Arguments equal {key comparedec elt}.
+Arguments fold {key comparedec elt A}.
+Arguments elements {key comparedec elt}.
+Arguments choose {key comparedec elt}.
+Arguments map {key comparedec elt elt'}.
+Arguments mapi {key comparedec elt elt'}.
+Arguments map2 {key comparedec elt elt' elt''}.
 
 (** Maps seen as an OrderedType : list comparison based
    solely on the first component. *)
@@ -1310,9 +1295,9 @@ Structure dict (key : Type) `{OrderedType key} (elt : Type) := Build_dict {
   this :> M.dict key elt;
   sorted : sort (M.K.ltk (elt:=elt)) this
 }.
-Implicit Arguments this [[key] [elt] [H]].
-Implicit Arguments Build_dict [[key] [elt] [H] [this]].
-Implicit Arguments sorted [[key] [elt] [H]].
+Arguments this {key H elt}.
+Arguments Build_dict {key H elt this}.
+Arguments sorted {key H elt}.
 
 Section MapDefinitions.
   Variable key : Type.

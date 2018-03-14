@@ -72,7 +72,7 @@ Class FMap `{OrderedType key} := {
   (** Maps are ordered types *)
   FMap_OrderedType :> forall `{OrderedType elt}, OrderedType (dict elt)
 }.
-Implicit Arguments dict [[H] [FMap]].
+Arguments dict key {H FMap}.
 
 (** Map notations (see below) are interpreted in scope [map_scope],
    delimited with key [scope]. We bind it to the type [map] and to

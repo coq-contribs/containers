@@ -194,38 +194,38 @@ Module SetList.
     Definition Exists (P : elt -> Prop) (s : t) := exists x, In x s /\ P x.
   End SetDefinitions.
 
-  Implicit Arguments empty [[elt] [comparedec]].
-  Implicit Arguments is_empty [[elt] [comparedec]].
-  Implicit Arguments mem [[elt] [comparedec]].
-  Implicit Arguments add [[elt] [comparedec]].
-  Implicit Arguments singleton [[elt] [comparedec]].
-  Implicit Arguments remove [[elt] [comparedec]].
-  Implicit Arguments union [[elt] [comparedec]].
-  Implicit Arguments inter [[elt] [comparedec]].
-  Implicit Arguments diff [[elt] [comparedec]].
-  Implicit Arguments equal [[elt] [comparedec]].
-  Implicit Arguments subset [[elt] [comparedec]].
-  Implicit Arguments map_monotonic [[elt] [comparedec] [B] [H]].
-  Implicit Arguments fold [[elt] [comparedec] [B]].
-  Implicit Arguments filter [[elt] [comparedec]].
-  Implicit Arguments for_all [[elt] [comparedec]].
-  Implicit Arguments exists_ [[elt] [comparedec]].
-  Implicit Arguments partition [[elt] [comparedec]].
-  Implicit Arguments cardinal [[elt] [comparedec]].
-  Implicit Arguments elements [[elt] [comparedec]].
-  Implicit Arguments min_elt [[elt] [comparedec]].
-  Implicit Arguments max_elt [[elt] [comparedec]].
-  Implicit Arguments choose [[elt] [comparedec]].
-  Implicit Arguments Equal [[elt] [comparedec]].
-  Implicit Arguments Subset [[elt] [comparedec]].
-  Implicit Arguments Empty [[elt] [comparedec]].
-  Implicit Arguments For_all [[elt] [comparedec]].
-  Implicit Arguments Exists [[elt] [comparedec]].
+  Arguments empty {elt comparedec}.
+  Arguments is_empty {elt comparedec}.
+  Arguments mem {elt comparedec}.
+  Arguments add {elt comparedec}.
+  Arguments singleton {elt comparedec}.
+  Arguments remove {elt comparedec}.
+  Arguments union {elt comparedec}.
+  Arguments inter {elt comparedec}.
+  Arguments diff {elt comparedec}.
+  Arguments equal {elt comparedec}.
+  Arguments subset {elt comparedec}.
+  Arguments map_monotonic {elt comparedec B H}.
+  Arguments fold {elt comparedec B}.
+  Arguments filter {elt comparedec}.
+  Arguments for_all {elt comparedec}.
+  Arguments exists_ {elt comparedec}.
+  Arguments partition {elt comparedec}.
+  Arguments cardinal {elt comparedec}.
+  Arguments elements {elt comparedec}.
+  Arguments min_elt {elt comparedec}.
+  Arguments max_elt {elt comparedec}.
+  Arguments choose {elt comparedec}.
+  Arguments Equal {elt comparedec}.
+  Arguments Subset {elt comparedec}.
+  Arguments Empty {elt comparedec}.
+  Arguments For_all {elt comparedec}.
+  Arguments Exists {elt comparedec}.
 
   Definition map {A : Type} `{OrderedType A} {B : Type} `{OrderedType B}
     (f : A -> B) (s : set A) : set B :=
       fold (fun a sb => add (f a) sb) s empty.
-  Implicit Arguments map [[A] [H] [B] [H0]].
+  Arguments map {A H B H0}.
 
   (** Sets seen as a CompareDec (uses list_CompareDec, but in an opaque way) *)
   Definition set_eq `{OrderedType A} : relation (set A) := @list_eq A _eq.
@@ -1100,9 +1100,9 @@ Module S := SetList.
 
 Structure set (A : Type) `{OrderedType A}
   := Build_set {this :> list A; sorted : sort _lt this}.
-Implicit Arguments this [[A] [H]].
-Implicit Arguments Build_set [[A] [H] [this]].
-Implicit Arguments sorted [[A] [H]].
+Arguments this {A H}.
+Arguments Build_set {A H this}.
+Arguments sorted {A H}.
 
 Section SetDefinitions.
   Variable A : Type.
@@ -1155,28 +1155,28 @@ Section SetDefinitions.
   Definition choose := min_elt.
 End SetDefinitions.
 
-Implicit Arguments empty [[A] [comparedec]].
-Implicit Arguments is_empty [[A] [comparedec]].
-Implicit Arguments mem [[A] [comparedec]].
-Implicit Arguments add [[A] [comparedec]].
-Implicit Arguments singleton [[A] [comparedec]].
-Implicit Arguments remove [[A] [comparedec]].
-Implicit Arguments union [[A] [comparedec]].
-Implicit Arguments inter [[A] [comparedec]].
-Implicit Arguments diff [[A] [comparedec]].
-Implicit Arguments equal [[A] [comparedec]].
-Implicit Arguments subset [[A] [comparedec]].
-Implicit Arguments map_monotonic [[A] [comparedec] [B] [H] [Mono]].
-Implicit Arguments fold [[A] [comparedec] [B]].
-Implicit Arguments filter [[A] [comparedec]].
-Implicit Arguments for_all [[A] [comparedec]].
-Implicit Arguments exists_ [[A] [comparedec]].
-Implicit Arguments partition [[A] [comparedec]].
-Implicit Arguments cardinal [[A] [comparedec]].
-Implicit Arguments elements [[A] [comparedec]].
-Implicit Arguments min_elt [[A] [comparedec]].
-Implicit Arguments max_elt [[A] [comparedec]].
-Implicit Arguments choose [[A] [comparedec]].
+Arguments empty {A comparedec}.
+Arguments is_empty {A comparedec}.
+Arguments mem {A comparedec}.
+Arguments add {A comparedec}.
+Arguments singleton {A comparedec}.
+Arguments remove {A comparedec}.
+Arguments union {A comparedec}.
+Arguments inter {A comparedec}.
+Arguments diff {A comparedec}.
+Arguments equal {A comparedec}.
+Arguments subset {A comparedec}.
+Arguments map_monotonic {A comparedec B H} _ {Mono}.
+Arguments fold {A comparedec B}.
+Arguments filter {A comparedec}.
+Arguments for_all {A comparedec}.
+Arguments exists_ {A comparedec}.
+Arguments partition {A comparedec}.
+Arguments cardinal {A comparedec}.
+Arguments elements {A comparedec}.
+Arguments min_elt {A comparedec}.
+Arguments max_elt {A comparedec}.
+Arguments choose {A comparedec}.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

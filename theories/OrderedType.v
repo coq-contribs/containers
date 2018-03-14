@@ -765,9 +765,9 @@ Hint Resolve Inf_lt.
 Hint Resolve Sort_Inf_NotIn.
 Hint Resolve In_inv_2 In_inv_3.
 
-Implicit Arguments eqk [[key] [elt] [key_OT]].
-Implicit Arguments eqke [[key] [elt] [key_OT]].
-Implicit Arguments ltk [[key] [elt] [key_OT]].
-Implicit Arguments MapsTo [[key] [elt] [key_OT]].
-Implicit Arguments In [[key] [elt] [key_OT]].
+Arguments eqk {key key_OT elt}.
+Arguments eqke {key key_OT elt}.
+Arguments ltk {key key_OT elt}.
+Arguments MapsTo {key key_OT elt}.
+Arguments In {key key_OT elt}.
 End KeyOrderedType.
