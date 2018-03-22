@@ -46,7 +46,7 @@ Proof.
   right; apply add_1; reflexivity.
   left; intuition. right.
   admit.
-Qed.
+Abort.
 Print Assumptions MapAVLInstance.MapAVL_FMapSpecs. (* closed ! *)
 
 Require Import MapPositiveInstance.
