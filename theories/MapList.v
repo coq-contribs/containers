@@ -1306,9 +1306,9 @@ Section MapDefinitions.
 
   Let t elt := dict key elt.
 
-  Implicit Types m : t elt.
+  Implicit Type m : t elt.
   Implicit Types x y : key.
-  Implicit Types e : elt.
+  Implicit Type e : elt.
 
   Definition empty : t elt := Build_dict (M.empty_sorted elt).
   Definition is_empty m : bool := M.is_empty m.(this).

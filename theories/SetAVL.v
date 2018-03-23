@@ -700,8 +700,8 @@ Module SetAVL.
 (*     Functional Scheme diff_ind := Induction for diff Sort Prop. *)
 (*     Functional Scheme union_ind := Induction for union Sort Prop. *)
 
-    Implicit Types x : elt.
-    Implicit Types s : tree (elt:=elt).
+    Implicit Type x : elt.
+    Implicit Type s : tree (elt:=elt).
 
     (** * Empty set *)
 
