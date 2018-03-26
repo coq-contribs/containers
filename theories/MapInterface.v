@@ -72,29 +72,12 @@ Class FMap `{OrderedType key} := {
   (** Maps are ordered types *)
   FMap_OrderedType :> forall `{OrderedType elt}, OrderedType (dict elt)
 }.
-Implicit Arguments dict [[H] [FMap]].
+Arguments dict key {H FMap}.
 
 (** Map notations (see below) are interpreted in scope [map_scope],
-   delimited with key [scope]. We bind it to the type [map] and to
-   other operations defined in the interface. *)
+   delimited with key [map]. We bind it to the type [dict]. *)
 Delimit Scope map_scope with map.
 Bind Scope map_scope with dict.
-Arguments Scope MapsTo [type_scope _ _ type_scope _ _ map_scope].
-Arguments Scope is_empty [type_scope _ _ type_scope map_scope].
-Arguments Scope mem [type_scope _ _ type_scope _ map_scope].
-Arguments Scope add [type_scope _ _ type_scope _ _ map_scope].
-Arguments Scope find [type_scope _ _ type_scope _ map_scope].
-Arguments Scope remove [type_scope _ _ type_scope _ map_scope].
-Arguments Scope equal [type_scope _ _ type_scope _ map_scope map_scope].
-Arguments Scope map [type_scope _ _ type_scope type_scope _ map_scope].
-Arguments Scope mapi [type_scope _ _ type_scope type_scope _ map_scope].
-Arguments Scope map2 [type_scope _ _ type_scope type_scope
-  type_scope _ map_scope map_scope].
-Arguments Scope fold [type_scope _ _ type_scope type_scope _ map_scope _].
-Arguments Scope cardinal [type_scope _ _ type_scope map_scope].
-Arguments Scope elements [type_scope _ _ type_scope map_scope].
-Arguments Scope insert [type_scope _ _ type_scope _ _ _ map_scope].
-Arguments Scope adjust [type_scope _ _ type_scope _ _ map_scope].
 
 (** All projections should be made opaque for tactics using [delta]-conversion,
    otherwise the underlying instances may appear during proofs, which then

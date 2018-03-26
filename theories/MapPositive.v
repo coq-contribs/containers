@@ -88,7 +88,7 @@ Module PositiveMap.
   Section A.
   Variable A:Type.
 
-  Implicit Arguments Leaf [A].
+  Arguments Leaf {A}.
 
   Definition empty : t A := Leaf.
 
@@ -952,7 +952,7 @@ Module PositiveMap.
   Variable A B C : Type.
   Variable f : option A -> option B -> option C.
 
-  Implicit Arguments Leaf [A].
+  Arguments Leaf {A}.
 
   Fixpoint xmap2_l (m : t A) {struct m} : t C :=
       match m with

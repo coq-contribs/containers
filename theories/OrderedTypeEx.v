@@ -12,20 +12,20 @@ Require Export Tactics.
 
 (** ** [Z] *)
 Require Import ZArith.
-Instance Z_StrictOrder : StrictOrder Zlt (@eq Z) := {
-  StrictOrder_Transitive := Zlt_trans;
+Instance Z_StrictOrder : StrictOrder Z.lt (@eq Z) := {
+  StrictOrder_Transitive := Z.lt_trans;
   StrictOrder_Irreflexive := Zlt_not_eq
 }.
 Program Instance Z_OrderedType : UsualOrderedType Z := {
-  SOT_lt := Zlt;
-  SOT_cmp := Zcompare;
+  SOT_lt := Z.lt;
+  SOT_cmp := Z.compare;
   SOT_StrictOrder := Z_StrictOrder
 }.
 Next Obligation.
-  case_eq (Zcompare x y); intro Hcomp; constructor.
+  case_eq (Z.compare x y); intro Hcomp; constructor.
   apply Zcompare_Eq_eq; assumption.
   assumption.
-  apply Zgt_lt; assumption.
+  apply Z.gt_lt; assumption.
 Qed.
 
 (** ** [nat] *)
@@ -85,30 +85,30 @@ Proof.
 Qed.
 Program Instance N_OrderedType : UsualOrderedType N := {
   SOT_lt := fun p q => Nleb q p = false;
-  SOT_cmp := Ncompare;
+  SOT_cmp := N.compare;
   SOT_StrictOrder := N_StrictOrder
 }.
 Next Obligation.
-  case_eq (Ncompare x y); intro Hcomp; constructor.
+  case_eq (N.compare x y); intro Hcomp; constructor.
   apply Ncompare_Eq_eq; assumption.
   assert (H := Nleb_Nle y x); destruct (Nleb y x); auto.
-  assert (H' := (proj1 H) (refl_equal _)); unfold Nle in H'.
+  assert (H' := (proj1 H) (refl_equal _)); unfold N.le in H'.
   rewrite <- Ncompare_antisym in H'; rewrite Hcomp in H';
     contradiction H'; auto.
   assert (H := Nleb_Nle x y); destruct (Nleb x y); auto.
-  assert (H' := (proj1 H) (refl_equal _)); unfold Nle in H'.
+  assert (H' := (proj1 H) (refl_equal _)); unfold N.le in H'.
   congruence.
 Qed.
 
 (** ** [positive] *)
-Instance positive_StrictOrder : StrictOrder Plt (@eq positive) := {
-  StrictOrder_Transitive := Plt_trans
+Instance positive_StrictOrder : StrictOrder Pos.lt (@eq positive) := {
+  StrictOrder_Transitive := Pos.lt_trans
 }.
 Proof.
-  intros x y H abs; rewrite abs in H; exact (Plt_irrefl y H).
+  intros x y H abs; rewrite abs in H; exact (Pos.lt_irrefl y H).
 Qed.
 Program Instance positive_OrderedType : UsualOrderedType positive := {
-  SOT_lt := Plt;
+  SOT_lt := Pos.lt;
   SOT_cmp := fun p q => Pcompare p q Eq;
   SOT_StrictOrder := positive_StrictOrder
 }.

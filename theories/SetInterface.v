@@ -89,33 +89,12 @@ Class FSet `{OrderedType A} := {
     SpecificOrderedType _ (Equal_pw set A In)
 }.
 
-Implicit Arguments set [[H] [FSet]].
+Arguments set _ {H FSet}.
 
 (** Set notations (see below) are interpreted in scope [set_scope],
-   delimited with key [scope]. We bind it to the type [set] and to
-   other operations defined in the interface. *)
+   delimited with key [set]. We bind it to the type [set]. *)
 Delimit Scope set_scope with set.
 Bind Scope set_scope with set.
-Arguments Scope In [type_scope _ _ _ set_scope].
-Arguments Scope is_empty [type_scope _ _ set_scope].
-Arguments Scope mem [type_scope _ _ _ set_scope].
-Arguments Scope add [type_scope _ _ _ set_scope].
-Arguments Scope remove [type_scope _ _ _ set_scope].
-Arguments Scope union [type_scope _ _ set_scope set_scope].
-Arguments Scope inter [type_scope _ _ set_scope set_scope].
-Arguments Scope diff [type_scope _ _ set_scope set_scope].
-Arguments Scope equal [type_scope _ _ set_scope set_scope].
-Arguments Scope subset [type_scope _ _ set_scope set_scope].
-Arguments Scope fold [type_scope _ _ _ _ set_scope _].
-Arguments Scope for_all [type_scope _ _ _ set_scope].
-Arguments Scope exists_ [type_scope _ _ _ set_scope].
-Arguments Scope filter [type_scope _ _ _ set_scope].
-Arguments Scope partition [type_scope _ _ _ set_scope].
-Arguments Scope cardinal [type_scope _ _ set_scope].
-Arguments Scope elements [type_scope _ _ set_scope].
-Arguments Scope choose [type_scope _ _ set_scope].
-Arguments Scope min_elt [type_scope _ _ set_scope].
-Arguments Scope max_elt [type_scope _ _ set_scope].
 
 (** All projections should be made opaque for tactics using [delta]-conversion,
    otherwise the underlying instances may appear during proofs, which then

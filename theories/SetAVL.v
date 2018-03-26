@@ -89,7 +89,7 @@ Module SetAVL.
 
     (** [create l x r] creates a node, assuming [l] and [r]
        to be balanced and [|height l - height r| <= 2]. *)
-    Notation max := Zmax.
+    Notation max := Z.max.
     Definition create l x r :=
       Node l x r (max (height l) (height r) + 1).
 
@@ -383,7 +383,7 @@ Module SetAVL.
                  | Leaf => a
                  | Node l x r _ => fold f r (f x (fold f l a))
                end.
-    Implicit Arguments fold [A].
+    Arguments fold [A].
 
     (** * Subset *)
 
@@ -700,8 +700,8 @@ Module SetAVL.
 (*     Functional Scheme diff_ind := Induction for diff Sort Prop. *)
 (*     Functional Scheme union_ind := Induction for union Sort Prop. *)
 
-    Implicit Types x : elt.
-    Implicit Types s : tree (elt:=elt).
+    Implicit Type x : elt.
+    Implicit Type s : tree (elt:=elt).
 
     (** * Empty set *)
 
@@ -1554,7 +1554,7 @@ Module SetAVL.
     Import Bool.
     Definition fold' (A : Type) (f : elt -> A -> A)(s : tree) :=
       SetList.SetList.fold f (elements s).
-    Implicit Arguments fold' [A].
+    Arguments fold' [A].
 
     Lemma fold_equiv_aux :
       forall (A : Type) (s : tree) (f : elt -> A -> A) (a : A) (acc : list elt),
@@ -1884,9 +1884,9 @@ Module S := SetAVL.
 
 Structure set (elt : Type) `{Helt : OrderedType elt}
   := Bst {this :> @S.tree elt Helt; is_bst : S.bst this}.
-Implicit Arguments this [[elt] [Helt]].
-Implicit Arguments Bst [[elt] [Helt] [this]].
-Implicit Arguments is_bst [[elt] [Helt]].
+Arguments this {elt Helt}.
+Arguments Bst {elt Helt this}.
+Arguments is_bst {elt Helt}.
 
 Section SetDefinitions.
   Context `{Helt : OrderedType elt}.

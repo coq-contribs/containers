@@ -468,7 +468,7 @@ Section Fold.
   Context {Comp : Proper (_eq ==> eqA ==> eqA) f}.
   Hypothesis Ass :transpose eqA f.
 
-  Variables (i:A).
+  Variable (i:A).
   Variables (s s':set elt)(x:elt).
 
   Lemma fold_empty : (fold f empty i) = i.

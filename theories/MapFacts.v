@@ -1,5 +1,6 @@
 Require Import Bool Structures.DecidableType Structures.DecidableTypeEx.
-Require Import OrderedType.
+From Containers Require Import OrderedType.
+From Containers Require OrderedTypeEx.
 Module Import K := KeyOrderedType.
 Require Import MapInterface Morphisms.
 Set Implicit Arguments.
@@ -322,9 +323,9 @@ Section WeakFacts.
     Qed.
 
     Variable elt elt' elt'' : Type.
-    Implicit Types m : t elt.
+    Implicit Type m : t elt.
     Implicit Types x y z : key.
-    Implicit Types e : elt.
+    Implicit Type e : elt.
 
     Lemma mem_b : forall m x y, x === y -> mem x m = mem y m.
     Proof.
@@ -2270,7 +2271,7 @@ End InductiveSpec.
 
 Section AdditionalMorphisms.
   Open Scope map_scope.
-  Require Import OrderedTypeEx.
+  Import OrderedTypeEx.
   (** Additional morphisms, when the value type is Ordered *)
   Context `{HF : @FMapSpecs key Hkey F}.
   Context `{elt_OT : OrderedType elt}.
