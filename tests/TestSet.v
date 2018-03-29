@@ -1,4 +1,5 @@
 Time Require Import Sets.
+Require SetConstructs.
 Open Scope set_scope.
 (* Require Import SetInterface SetListInstance. *)
 
@@ -29,7 +30,7 @@ Section Test.
 (*   Time Eval vm_compute in {}. *)
   Time Eval vm_compute in 6 \in {fill {90} 7 ~ 6}.
   Time Eval vm_compute in elements {fill {90} 7 ~ 6}.
-  Require Import SetConstructs.
+  Import SetConstructs.
 
   Time Eval vm_compute in (cardinal (powerset (fill {12} 3))).
   Time Eval vm_compute in (elements (cart_prod
@@ -107,12 +108,10 @@ Program Fixpoint setn_aux' (A : Type) `{OT : OrderedType A} (n : nat) :
       let (T, _) := @setn_aux' A OT n0 in
       existT _ (@set T _ _) _
   end.
-Solve Obligations using eauto with typeclass_instances.
-(*
 Next Obligation.
-  exact (@SOT_as_OT (set T) _ _ _).
+  refine (@SOT_as_OT _ _ _).
 Defined.
-*)
+
 Definition setn' (A : Type) `{OrderedType A} (n : nat) : Type :=
   projT1 (setn_aux' A n).
 

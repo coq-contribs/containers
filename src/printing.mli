@@ -1,2 +1,1 @@
-val print_constr : Format.formatter -> Term.constr -> unit
-val print_ast : Constrexpr.constr_expr -> unit
+val print_constr : Evd.evar_map -> Format.formatter -> EConstr.t -> unit

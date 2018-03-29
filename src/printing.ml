@@ -11,28 +11,29 @@ let string_of_name name =
     | Names.Name n -> Names.Id.to_string n
 
 let print_kn fmt kn =
-  fprintf fmt "%s" (Names.string_of_con (Names.Constant.make1 kn))
+  fprintf fmt "%s" (Names.Constant.to_string (Names.Constant.make1 kn))
 
 let coq_init_constant s =
   Coqlib.gen_reference_in_modules "RecursiveDefinition" Coqlib.init_modules s
 
 let coq_or = coq_init_constant "or"
 
-let rec print_constr fmt c =
-  let f = print_constr in
-  match kind_of_term c with
-  | _ when Globnames.is_global (Coqlib.build_coq_False ()) c -> fprintf fmt "False"
-  | _ when Globnames.is_global (Coqlib.build_coq_True ()) c -> fprintf fmt "True"
-  | _ when Globnames.is_global (Coqlib.build_coq_not ()) c -> fprintf fmt "Not"
-  | _ when Globnames.is_global coq_or c -> fprintf fmt "Or"
-  | _ when Globnames.is_global (Coqlib.build_coq_and ()) c -> fprintf fmt "And"
+let rec print_constr evd fmt (c: EConstr.t) =
+  let c' = EConstr.to_constr evd c in
+  let f = print_constr evd in
+  match EConstr.kind evd c with
+  | _ when Globnames.is_global (Coqlib.build_coq_False ()) c' -> fprintf fmt "False"
+  | _ when Globnames.is_global (Coqlib.build_coq_True ()) c' -> fprintf fmt "True"
+  | _ when Globnames.is_global (Coqlib.build_coq_not ()) c' -> fprintf fmt "Not"
+  | _ when Globnames.is_global coq_or c' -> fprintf fmt "Or"
+  | _ when Globnames.is_global (Coqlib.build_coq_and ()) c' -> fprintf fmt "And"
   | Rel i -> fprintf fmt "rel %d" i
   | Var id -> fprintf fmt ("var %s") (Names.Id.to_string id)
   | Meta _ -> fprintf fmt "meta"
   | Evar (i, constr_array) ->
       fprintf fmt "Evar : %d %a" (Evar.repr i) (print_array f " " "") constr_array
   | Sort s ->
-      (match s with
+    (match EConstr.ESorts.kind evd s with
 	 | Prop Null -> fprintf fmt "sort(prop)"
 	 | Prop Pos -> fprintf fmt "sort(set)"
 	 | Type _ -> fprintf fmt "sort(type)")
@@ -49,7 +50,7 @@ let rec print_constr fmt c =
   | App (constr, constr_array) ->
       fprintf fmt "%a @ (%a)" f constr (print_array f ", " "") constr_array
   | Const (const, _) ->
-      fprintf fmt "constante %s" (Names.string_of_con const)
+      fprintf fmt "constante %s" (Names.Constant.to_string const)
   | Ind((mult_ind, i), _) ->
       fprintf fmt "Ind (%a, %d)" print_kn (Names.MutInd.user mult_ind) i
   | Construct (((mult_ind, i), i'), _) ->
@@ -75,9 +76,4 @@ let rec print_constr fmt c =
 	(print_array f ", " "") type_a
 	(print_array f ", " "") constr_a
   | Proj (p, c) -> fprintf fmt "Proj (%s, %a)"
-    (Names.string_of_con (Names.Projection.constant p)) f c
-
-let print_ast constr_expr =
-  let constr, _ =
-    Constrintern.interp_constr (Global.env ()) Evd.empty constr_expr in
-    fprintf std_formatter "%a" print_constr constr
+    (Names.Constant.to_string (Names.Projection.constant p)) f c
