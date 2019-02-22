@@ -44,7 +44,7 @@ let print_ind_body fmt ibody =
 
 let dl id = CAst.make id
 let cf cexpr = false, cexpr
-let cprop = CAst.make @@ CSort Misctypes.GProp
+let cprop = CAst.make @@ CSort Glob_term.GProp
 let ccomparison = mkIdentC (Names.Id.of_string "comparison")
 let bin_rel_t id_t =
   CAst.make @@ CProdN ([CLocalAssum ([(dl Names.Anonymous);(dl Names.Anonymous)],
@@ -63,7 +63,7 @@ let declare_definition
 
 (* building the equality predicate *)
 let equiv_ref =
-  CAst.make (Libnames.(Qualid (qualid_of_string "Equivalence.equiv")))
+  Libnames.qualid_of_string "Equivalence.equiv"
 let mk_equiv x y =
   CApp ((None, mkRefC equiv_ref),
 (* 			 mkIdentC (Names.Id.of_string "equiv")), *)
@@ -113,7 +113,7 @@ let make_eq_mutual ind mind body =
 
 (* building the ordering predicate *)
 let lt_StrictOrder_ref =
-  dl Libnames.(Qualid (qualid_of_string "Containers.OrderedType.lt_StrictOrder"))
+  Libnames.qualid_of_string "Containers.OrderedType.lt_StrictOrder"
 let mk_lt x y =
   CApp ((None, mkRefC lt_StrictOrder_ref),
 	[mkIdentC x, None; mkIdentC y, None])
@@ -189,15 +189,15 @@ let make_lt_mutual ind mind body =
     [((dl id_lt, None), [], Some (bin_rel_t id_t) , lconstr), []]
 
 (* building the comparison function *)
-let ref_Eq = Libnames.Ident (Names.Id.of_string "Eq")
-let ref_Lt = Libnames.Ident (Names.Id.of_string "Lt")
-let ref_Gt = Libnames.Ident (Names.Id.of_string "Gt")
 let id_Eq = Names.Id.of_string "Eq"
 let id_Lt = Names.Id.of_string "Lt"
 let id_Gt = Names.Id.of_string "Gt"
+let ref_Eq = Libnames.qualid_of_ident id_Eq
+let ref_Lt = Libnames.qualid_of_ident id_Lt
+let ref_Gt = Libnames.qualid_of_ident id_Gt
 
 let compare_ref =
-  CAst.make Libnames.(Qualid (qualid_of_string "Containers.OrderedType.compare"))
+  Libnames.qualid_of_string "Containers.OrderedType.compare"
 let mk_cmp x y =
   CAst.make @@ CApp ((None, mkRefC compare_ref),
 	[mkIdentC x, None; mkIdentC y, None])
@@ -206,12 +206,12 @@ let pathole = CAst.make @@ CPatAtom (None)
 let rec lholes = function
   | 0 -> []
   | n -> pathole::(lholes (n-1))
-let patc r l = CAst.make @@ CPatCstr (dl r, None, l)
+let patc r l = CAst.make @@ CPatCstr (r, None, l)
 let rec lpats v acc = function
   | 0 -> acc
   | n ->
-      let p = CAst.make @@ CPatAtom (Some (dl (Libnames.Ident
-					     (Nameops.make_ident v (Some n))))) in
+      let p = CAst.make @@ CPatAtom (Some (Libnames.qualid_of_ident
+					     (Nameops.make_ident v (Some n)))) in
       lpats v (p::acc) (n-1)
 
 let rec lvars acc base n =
@@ -243,11 +243,11 @@ let rec branches_constr cmpid names arities : branch_expr list =
   match names, arities with
     | [], [] -> []
     | [cid], [carity] ->
-      let r = Libnames.Ident cid in
+      let r = Libnames.qualid_of_ident cid in
       let eqn_lexi = lexi_eqn_constr r carity in
       [eqn_lexi]
     | cid::otherids, carity::otherars ->
-      let r = Libnames.Ident cid in
+      let r = Libnames.qualid_of_ident cid in
       let eqn_lexi = lexi_eqn_constr r carity in
       let eqn_inter1 = dl ([[patc r (lholes carity); pathole]], mkIdentC id_Lt) in
       let eqn_inter2 = dl ([[pathole; patc r (lholes carity)]], mkIdentC id_Gt) in
@@ -278,16 +278,16 @@ let load_tactic s =
   Tacinterp.interp
     (Tacexpr.TacArg
        (None, Tacexpr.Reference
-          (dl (Libnames.Ident (Names.Id.of_string s)))))
+          (Libnames.qualid_of_ident (Names.Id.of_string s))))
 
 let load_tactic_args s lids =
   let args =
-    List.map (fun id -> Tacexpr.Reference (dl (Libnames.Ident id))) lids
+    List.map (fun id -> Tacexpr.Reference (Libnames.qualid_of_ident id)) lids
   in
   Tacinterp.interp
     (Tacexpr.TacArg
        (Loc.tag @@ Tacexpr.TacCall (Loc.tag
-       (dl (Libnames.Ident (Names.Id.of_string s)),
+       (Libnames.qualid_of_ident (Names.Id.of_string s),
         args))))
 
 let property_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Property)
@@ -306,7 +306,7 @@ let prove_refl indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let ceq = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_eq)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let goal =
     mkNamedProd x indconstr
 		(mkApp (ceq, [| mkVar x; mkVar x |])) in
@@ -324,7 +324,7 @@ let prove_sym indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let ceq = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_eq)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -346,7 +346,7 @@ let prove_trans indconstr mind body =
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
   let ceq = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_eq)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -393,9 +393,9 @@ let prove_lt_trans indconstr mind body =
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
   let clt = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_lt)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_lt))) in
   let ceq = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_eq)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let prove_eq_lt_and_gt () =
     let id_eq_sym = add_suffix id_t "_eq_sym" in
     let id_eq_trans = add_suffix id_t "_eq_trans" in
@@ -462,11 +462,11 @@ let prove_lt_irrefl indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let clt = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_lt)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_lt))) in
   let ceq = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_eq)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let cfalse = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident (Names.Id.of_string "False"))))) in
+    (Nametab.global (Libnames.qualid_of_ident (Names.Id.of_string "False")))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -485,8 +485,7 @@ let prove_lt_irrefl indconstr mind body =
     Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
 
 let build_strictorder_ref =
-  dl Libnames.(Qualid
-    (qualid_of_string "Containers.OrderedType.Build_StrictOrder"))
+  Libnames.qualid_of_string "Containers.OrderedType.Build_StrictOrder"
 let prove_StrictOrder indconstr mind body =
   prove_lt_trans indconstr mind body;
   prove_lt_irrefl indconstr mind body;
@@ -513,14 +512,14 @@ let prove_t_compare_spec indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let clt = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_lt)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_lt))) in
   let ceq = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_eq)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let ccmp = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id_cmp)))) in
+    (Nametab.global (Libnames.qualid_of_ident id_cmp))) in
   let ccomp_spec = EConstr.of_constr (Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident
-		       (Names.Id.of_string "compare_spec"))))) in
+    (Nametab.global (Libnames.qualid_of_ident
+		       (Names.Id.of_string "compare_spec")))) in
   let goal =
     mkNamedProd x indconstr
       (mkNamedProd y indconstr
@@ -536,8 +535,7 @@ let prove_t_compare_spec indconstr mind body =
   Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
 
 let build_ot_ref =
-  dl Libnames.(Qualid
-    (qualid_of_string "Containers.OrderedType.Build_OrderedType"))
+  Libnames.qualid_of_string "Containers.OrderedType.Build_OrderedType"
 let prove_OrderedType indconstr mind body =
   prove_t_compare_spec indconstr mind body;
   let id_t = body.Declarations.mind_typename in
@@ -574,11 +572,11 @@ let generate_simple_ot gref =
   (* define the equality predicate *)
   let mutual_eq = make_eq_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  ComInductive.do_mutual_inductive mutual_eq false false false Declarations.Finite;
+  ComInductive.do_mutual_inductive mutual_eq false false false ComInductive.NonUniformParameters Declarations.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = make_lt_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  ComInductive.do_mutual_inductive mutual_lt false false false Declarations.Finite;
+  ComInductive.do_mutual_inductive mutual_lt false false false ComInductive.NonUniformParameters Declarations.Finite;
   (* declare the comparison function *)
   let id_cmp, ttt = make_cmp_def ind mind ibody in
     declare_definition id_cmp
@@ -749,11 +747,11 @@ let rec rbranches_constr cmpid names arities mask =
   match names, arities, mask with
     | [], [], [] -> []
     | [cid], [carity], [cmask] ->
-	let r = Libnames.Ident cid in
+	let r = Libnames.qualid_of_ident cid in
 	let eqn_lexi = rlexi_eqn_constr r cmpid carity cmask in
 	  [eqn_lexi]
     | cid::otherids, carity::otherars, cmask::othermasks ->
-	let r = Libnames.Ident cid in
+	let r = Libnames.qualid_of_ident cid in
 	let eqn_lexi = rlexi_eqn_constr r cmpid carity cmask in
 	let eqn_inter1 = dl ([[patc r (lholes carity); pathole]], mkIdentC id_Lt) in
 	let eqn_inter2 = dl ([[pathole; patc r (lholes carity)]], mkIdentC id_Gt) in
@@ -815,11 +813,11 @@ let generate_rec_ot gref =
   (* define the equality predicate *)
   let mutual_eq = rmake_eq_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  ComInductive.do_mutual_inductive mutual_eq false false false Declarations.Finite;
+  ComInductive.do_mutual_inductive mutual_eq false false false ComInductive.NonUniformParameters Declarations.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = rmake_lt_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  ComInductive.do_mutual_inductive mutual_lt false false false Declarations.Finite;
+  ComInductive.do_mutual_inductive mutual_lt false false false ComInductive.NonUniformParameters Declarations.Finite;
   (* declare the comparison function *)
   let fexpr = rmake_cmp_def ind mask mind ibody in
   ComFixpoint.do_fixpoint Decl_kinds.Global false [(fexpr, [])];
@@ -834,7 +832,7 @@ open Declarations
 
 let c_of_id id =
   Universes.constr_of_global
-    (Nametab.global (dl (Libnames.Ident id)))
+    (Nametab.global (Libnames.qualid_of_ident id))
 
 exception FoundEqual of int
 let make_masks mind =
@@ -1001,7 +999,7 @@ let mprove_trans k ids ids_eq mind =
   in
   do_proofs goals transtactic
 
-let mkARefC id = None, dl (Libnames.Ident id), None
+let mkARefC id = None, Libnames.qualid_of_ident id, None
 
 let mprove_Equivalence k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
@@ -1104,7 +1102,7 @@ open Stdarg
 let apply_tactic s tacs =
   Tacexpr.TacArg
     (Loc.tag @@ Tacexpr.TacCall (Loc.tag
-				   (dl (Libnames.Ident (Names.Id.of_string s)),
+				   (Libnames.qualid_of_ident (Names.Id.of_string s),
 				    List.map (fun t -> Tacexpr.Tacexp t) tacs)))
 
 let seq_eapply lids : raw_tactic_expr =
@@ -1351,11 +1349,11 @@ let rec mbranches_constr ids_cmp names arities mask : branch_expr list =
   match names, arities, mask with
     | [], [], [] -> []
     | [cid], [carity], [cmask] ->
-      let r = Libnames.Ident cid in
+      let r = Libnames.qualid_of_ident cid in
       let eqn_lexi = mlexi_eqn_constr r ids_cmp carity cmask in
       [eqn_lexi]
     | cid::otherids, carity::otherars, cmask::othermasks ->
-      let r = Libnames.Ident cid in
+      let r = Libnames.qualid_of_ident cid in
       let eqn_lexi = mlexi_eqn_constr r ids_cmp carity cmask in
       let eqn_inter1 = dl ([[patc r (lholes carity); pathole]], mkIdentC id_Lt) in
       let eqn_inter2 = dl ([[pathole; patc r (lholes carity)]], mkIdentC id_Gt) in
@@ -1528,12 +1526,12 @@ let generate_mutual_ot gref =
   if_verbose Feedback.msg_notice (str "Inductive kind : " ++ pr_kind kind);
   (* define the equality predicate *)
   let mutual_eq = mmake_eq_mutual ind masks mind in
-  ComInductive.do_mutual_inductive mutual_eq false false false Declarations.Finite;
+  ComInductive.do_mutual_inductive mutual_eq false false false ComInductive.NonUniformParameters Declarations.Finite;
   (* prove the Equivalence instance *)
   mprove_Equivalence kind mind;
   (* define the strict ordering predicate *)
   let mutual_lt = mmake_lt_mutual ind masks mind in
-  ComInductive.do_mutual_inductive mutual_lt false false false Declarations.Finite;
+  ComInductive.do_mutual_inductive mutual_lt false false false ComInductive.NonUniformParameters Declarations.Finite;
   (* prove the StrictOrder instance *)
   mprove_StrictOrder kind mind;
   (* define the comparison function *)

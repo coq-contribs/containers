@@ -1,4 +1,5 @@
 open Format
+open Constr
 open Term
 
 let print_array f sep fin fmt a =
@@ -34,8 +35,8 @@ let rec print_constr evd fmt (c: EConstr.t) =
       fprintf fmt "Evar : %d %a" (Evar.repr i) (print_array f " " "") constr_array
   | Sort s ->
     (match EConstr.ESorts.kind evd s with
-	 | Prop Null -> fprintf fmt "sort(prop)"
-	 | Prop Pos -> fprintf fmt "sort(set)"
+	 | Prop -> fprintf fmt "sort(prop)"
+	 | Set -> fprintf fmt "sort(set)"
 	 | Type _ -> fprintf fmt "sort(type)")
   | Cast (term, _, typ) ->
       fprintf fmt "cast du term %a avec le type %a" f term f typ
