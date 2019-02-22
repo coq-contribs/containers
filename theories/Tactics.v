@@ -79,9 +79,9 @@ Ltac solve_by_trans_modulo :=
     | H1 : ?R ?A ?B, H2 : ?R ?B ?C |- ?R ?A ?C =>
       transitivity B; eassumption
     | H1 : ?R ?A ?B, H2 : ?R' ?B ?C |- ?R ?A ?C =>
-      apply eq_gt with B; assumption
+      exact (@eq_gt _ _ B C A H2 H1)
     | H1 : ?R ?A ?B, H2 : ?R' ?B ?C |- ?R' ?A ?C =>
-      apply eq_lt with B; [symmetry|]; assumption
+      exact (@eq_lt _ _ B A C (Equivalence_Symmetric _ _ H1) H2)
  end.
 Ltac inductive_lexico_trans :=
   do 4 intro; inversion_clear 0; intro; inversion_clear 0;
@@ -156,19 +156,36 @@ Ltac rinductive_eq_gt t_eq_trans :=
         do 2 intro; inversion_clear 0;
           try tconstructor (solve_eq_gt t_eq_trans).
 
+(** Legacy tactic: stopped working because of change in apply/unification ? *)
+(* Ltac rsolve_by_trans_modulo *)
+(*   t_eq_sym t_eq_trans t_eq_gt t_eq_lt := *)
+(*   match goal with *)
+(*     | H1 : ?R ?A ?B, H2 : ?R ?B ?C |- ?R ?A ?C => *)
+(*       first [apply t_eq_trans with B | transitivity B]; eassumption *)
+(*     | H1 : ?R ?A ?B, H2 : ?R' ?B ?C |- ?R ?A ?C => *)
+(*       first [apply t_eq_gt with B | apply eq_gt with B]; assumption *)
+(*     | H1 : ?R ?A ?B, H2 : ?R' ?B ?C |- ?R' ?A ?C => *)
+(*       first [apply t_eq_lt with B; [apply t_eq_sym |] | *)
+(*         apply eq_lt with B; [symmetry |]]; assumption *)
+(*     | IH : forall z, ?R _ _ -> ?R _ _ |- ?R _ _ => *)
+(*       apply IH; assumption *)
+(*  end. *)
 Ltac rsolve_by_trans_modulo
   t_eq_sym t_eq_trans t_eq_gt t_eq_lt :=
   match goal with
-    | H1 : ?R ?A ?B, H2 : ?R ?B ?C |- ?R ?A ?C =>
-      first [apply t_eq_trans with B | transitivity B]; eassumption
-    | H1 : ?R ?A ?B, H2 : ?R' ?B ?C |- ?R ?A ?C =>
-      first [apply t_eq_gt with B | apply eq_gt with B]; assumption
-    | H1 : ?R ?A ?B, H2 : ?R' ?B ?C |- ?R' ?A ?C =>
-      first [apply t_eq_lt with B; [apply t_eq_sym |] |
-        apply eq_lt with B; [symmetry |]]; assumption
-    | IH : forall z, ?R _ _ -> ?R _ _ |- ?R _ _ =>
-      apply IH; assumption
- end.
+  | H1 : ?R ?A ?B, H2 : ?R ?B ?C |- ?R ?A ?C =>
+    (apply t_eq_trans with B; assumption) ||
+    (transitivity B; eassumption)
+  | H1 : ?R ?A ?B, H2 : ?R' ?B ?C |- ?R ?A ?C =>
+    (apply t_eq_gt with B; assumption) ||
+      exact (@eq_gt _ _ B C A H2 H1)
+  | H1 : ?R ?A ?B, H2 : ?R' ?B ?C |- ?R' ?A ?C =>
+    (apply t_eq_lt with B; [ apply t_eq_sym | ]; assumption) ||
+    exact (@eq_lt _ _ B A C (Equivalence_Symmetric _ _ H1) H2)
+  | IH : forall z, ?R _ _ -> ?R _ _ |- ?R _ _ =>
+    apply IH; assumption
+  end.
+
 Ltac rinductive_lexico_trans t_eq_sym t_eq_trans t_eq_gt t_eq_lt :=
   let nx := fresh "x" in let ny := fresh "y" in let nz := fresh "z" in
     let nHlt1 := fresh "Hlt1" in
