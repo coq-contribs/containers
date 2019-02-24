@@ -234,19 +234,27 @@ Ltac minductive_trans :=
 (** ** StrictOrder *)
 Ltac minductive_irrefl :=
   do 3 intro; induction 0; intro;
-    inversion_clear 0; eauto; solve_by_irrefl.
+  inversion_clear 0; eauto; solve_by_irrefl.
 Ltac msolve_eq_lt s :=
   solve [
-    eapply transitivity; [symmetry|]; eassumption |
-      eapply eq_lt; eassumption |
-        s
-  ].
+      eapply transitivity; [symmetry|]; eassumption |
+      match goal with
+      | E: ?N === ?M, L: ?N <<< ?P |- ?M <<< ?P =>
+        exact (@eq_lt _ _ _ _ _ E L)
+      end
+      (* eapply eq_lt; eassumption | *) |
+      s
+    ].
 Ltac msolve_eq_gt s :=
   solve [
-    s |
+      s |
       eapply transitivity; eassumption |
-        eapply eq_gt; eassumption |
-          auto
+      match goal with
+      | E: ?N === ?M, L: ?P <<< ?N |- ?P <<< ?M =>
+        exact (@eq_gt _ _ _ _ _ E L)
+      end
+      (* eapply eq_gt; eassumption *) |
+      auto
   ].
 Ltac minductive_eq_lt_gt s :=
   let nx := fresh "x" in let nx' := fresh "x'" in
@@ -261,21 +269,22 @@ Ltac msolve_by_trans_modulo strans seqgt seqlt :=
         (first [ strans B | transitivity B ]); eassumption
   | H1:?R ?A ?B, H2:?R' ?B ?C
     |- ?R ?A ?C =>
-        (first [ seqgt B | apply eq_gt with B ]); assumption
+        (first [ seqgt B | exact (@eq_gt _ _ _ _ _ H2 H1) ]); assumption
   | H1:?R ?A ?B, H2:?R' ?B ?C
     |- ?R' ?A ?C =>
         (first
-          [ seqlt B | apply eq_lt with B; [ symmetry  in |- * | idtac ] ]);
+           [ seqlt B |
+             exact (@eq_lt _ _ _ _ _ (Equivalence_Symmetric _ _ H1) H2) ]);
         assumption
-    | IH:forall x y z, ?R _ _ -> ?R _ _ -> ?R _ _ |- ?R _ _ =>
-      eapply IH; eassumption
+  | IH:forall x y z, ?R _ _ -> ?R _ _ -> ?R _ _ |- ?R _ _ =>
+    eapply IH; eassumption
   end.
 Ltac minductive_lexico_trans sstrans seqgt seqlt :=
   let nx := fresh "x" in let ny := fresh "y" in
     let nz := fresh "z" in let nHlt1 := fresh "Hlt1" in
       intros nx ny nz nHlt1; revert nz; induction nHlt1;
-        do 2 intro; inversion_clear 0;
-          tconstructor (msolve_by_trans_modulo sstrans seqgt seqlt).
+      do 2 intro; inversion_clear 0;
+      once (constructor; msolve_by_trans_modulo sstrans seqgt seqlt).
 
 (** ** compare_spec *)
 Ltac msolve_compare_spec_match s :=
