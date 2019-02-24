@@ -908,16 +908,12 @@ let mmake_eq_mutual ind (masks : int list list array) mind =
 	 lconstrs)
 
 let do_proofs goals tac =
-  let env = Global.env () in
-  let evd = Evd.from_env env in
-  let do_proof (name,goal) =
-    let evd, egoal = Constrintern.interp_constr_evars env evd (CAst.make goal) in
-    Lemmas.start_proof name property_kind evd egoal dummy_hook;
-    ignore (Pfedit.by tac);
-    save_transparent_proof ()
-  in
-  ignore (List.map do_proof goals)
-
+  (* The goals must be proved mutually inductively *)
+  let thms = List.map (fun (name, goal) ->
+      (CAst.make name, None), ([], CAst.make goal)) goals in
+  Lemmas.start_proof_com property_kind thms dummy_hook;
+  List.iter (fun _ -> ignore (Pfedit.by tac)) goals;
+  save_transparent_proof ()
 
 let mprove_refl k ids ids_eq mind =
   let x = Nameops.make_ident "x" None in
