@@ -849,7 +849,7 @@ Section Sum.
     intros s;pattern s; apply set_rec.
     intros.
     rewrite <- (fold_equal ct 0 H).
-    rewrite (filter_m _ _ _ (equal_2 H)) in H0; auto.
+    rewrite (filter_m (equal_2 H)) in H0; auto.
     intros; rewrite (fold_add ct); auto.
     generalize (@add_filter_1 _ _ _ _ f _ s0 (add x s0) x)
       (@add_filter_2 _ _ _ _ f _ s0 (add x s0) x) .
