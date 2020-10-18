@@ -36,6 +36,8 @@ theories/CMapPositiveInstance.v
 theories/Maps.v
 theories/Generate.v
 theories/SetConstructs.v
+theories/MapPatricia.v
+theories/MapPatriciaInstance.v
 
 tests/BenchMarks.v
 tests/TestSet.v

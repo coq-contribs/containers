@@ -6,8 +6,8 @@ Require MapPatricia.
    *)
 
 (** * [MapPatricia_FMap] : an instance of [FMap] for positives *)
-Instance MapPatricia_FMap : @FMap _
-  (@SOT_as_OT _ _ _ OrderedTypeEx.positive_l2r_OrderedType) := {
+Program Instance MapPatricia_FMap : @FMap _
+  (@SOT_as_OT _ _ OrderedTypeEx.positive_l2r_OrderedType) := {
   dict := @MapPatricia.tree;
   MapsTo := @MapPatricia.MapsTo;
   empty := @MapPatricia.empty;
@@ -30,5 +30,5 @@ Instance MapPatricia_FMap : @FMap _
   cardinal := @MapPatricia.cardinal;
   elements := @MapPatricia.elements
 }.
-admit.
-Defined.
+Next Obligation.
+Admitted.

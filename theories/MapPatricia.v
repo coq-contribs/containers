@@ -1,6 +1,7 @@
 Require Import NArith Bool List.
 Require Import OrderedTypeEx.
 Open Scope lazy_bool_scope.
+Require Import Lia.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -72,10 +73,10 @@ Fixpoint mask_and_branching_bit_p (p q : positive) : prefix * nat * bool :=
     | xH, xH => (N0, O, true) (* arbitrary *)
     | xO p', xO q' =>
       let '(mask, b, dir) := mask_and_branching_bit_p p' q' in
-        (Ndouble mask, S b, dir)
+        (N.double mask, S b, dir)
     | xI p', xI q' =>
       let '(mask, b, dir) := mask_and_branching_bit_p p' q' in
-        (Ndouble_plus_one mask, S b, dir)
+        (N.succ_double mask, S b, dir)
     | xO _, xI _ | xO _, xH => (N0, O, true)
     | xI _, xO _ | xH, xO _ => (N0, O, false)
     | xI p, xH => (Npos xH, S (first_one p), false)
@@ -253,7 +254,7 @@ Section PairRecursion.
     forall s t s' t', lt_pair (s, t) (s', t') ->
       sz_pair (s, t) < sz_pair (s', t').
   Proof.
-    intros; inversion H; subst; unfold sz_pair; simpl; omega.
+    intros; inversion H; subst; unfold sz_pair; simpl; lia.
   Qed.
   Corollary wf_lt_pair : well_founded lt_pair.
   Proof.
