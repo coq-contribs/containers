@@ -1,6 +1,7 @@
 open Format
 open Constr
 open Term
+open Context
 
 let print_array f sep fin fmt a =
   Array.iter (fun i -> fprintf fmt "%a%s" f i sep) a;
@@ -35,19 +36,20 @@ let rec print_constr evd fmt (c: EConstr.t) =
       fprintf fmt "Evar : %d %a" (Evar.repr i) (print_array f " " "") constr_array
   | Sort s ->
     (match EConstr.ESorts.kind evd s with
+	 | SProp -> fprintf fmt "sort(sprop)"
 	 | Prop -> fprintf fmt "sort(prop)"
 	 | Set -> fprintf fmt "sort(set)"
 	 | Type _ -> fprintf fmt "sort(type)")
   | Cast (term, _, typ) ->
       fprintf fmt "cast du term %a avec le type %a" f term f typ
   | Prod (name, typ, typ') ->
-      fprintf fmt "Prod (%s * %a * {%a})" (string_of_name name) f typ f typ'
+      fprintf fmt "Prod (%s * %a * {%a})" (string_of_name name.binder_name) f typ f typ'
   | Lambda (name, typ, constr) ->
       fprintf fmt "Lambda (%s : %a=%a)"
-	(string_of_name name) f typ f constr
+	(string_of_name name.binder_name) f typ f constr
   | LetIn (name, constr,typ, constr') ->
       fprintf fmt "Let %s : %a = %a in %a@."
-	(string_of_name name) f typ f constr f constr'
+	(string_of_name name.binder_name) f typ f constr f constr'
   | App (constr, constr_array) ->
       fprintf fmt "%a @ (%a)" f constr (print_array f ", " "") constr_array
   | Const (const, _) ->
@@ -64,7 +66,7 @@ let rec print_constr evd fmt (c: EConstr.t) =
       fprintf fmt "fix %d, %d\n %a\n %a\n %a@."
 	(Array.length int_array) int
 	(print_array (fun fmt s ->
-			fprintf fmt "%s" (string_of_name s)) ", " "")
+			fprintf fmt "%s" (string_of_name s.binder_name)) ", " "")
 	name_a
 	(print_array f ", " "") type_a
 	(print_array f ", " "") constr_a
@@ -72,9 +74,10 @@ let rec print_constr evd fmt (c: EConstr.t) =
       fprintf fmt "cofix %d\n %a\n %a\n %a@."
 	int
 	(print_array (fun fmt s ->
-			fprintf fmt "%s" (string_of_name s)) ", " "")
+			fprintf fmt "%s" (string_of_name s.binder_name)) ", " "")
 	name_a
 	(print_array f ", " "") type_a
 	(print_array f ", " "") constr_a
   | Proj (p, c) -> fprintf fmt "Proj (%s, %a)"
     (Names.Constant.to_string (Names.Projection.constant p)) f c
+  | Int n -> fprintf fmt "Int (%s)" (Uint63.to_string n)

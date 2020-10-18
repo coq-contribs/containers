@@ -1,11 +1,10 @@
-(*i camlp4deps: "parsing/grammar.cma" i*)
-(*i camlp4use: "pa_extend.cmp" i*)
+{
 
 open Format
-open Term
 open EConstr
 open Pp
 open Flags
+open Context
 
 open Nameops
 open Constrexpr
@@ -13,7 +12,11 @@ open Constrexpr_ops
 open Printing
 open Ltac_plugin
 
+}
+
 DECLARE PLUGIN "containers_plugin"
+
+{
 
 type inductive_kind = Simple | Recursive | Mutual
 let pr_kind = function
@@ -38,8 +41,8 @@ let print_ind_body fmt ibody =
       ibody.Declarations.mind_consnames
       ibody.Declarations.mind_nf_lc
       ibody.Declarations.mind_consnrealdecls
-      (fun i id typ n -> fprintf fmt "\t #%d : %a [%d arguments] == %a\n"
-	 i print_id id n (print_constr evd) (EConstr.of_constr typ));
+      (fun i id (ctx,typ) n -> fprintf fmt "\t #%d : %a [%d arguments] == %a\n"
+	 i print_id id n (print_constr evd) (EConstr.of_constr (Term.it_mkProd_or_LetIn typ ctx)));
     fprintf fmt "}\n"
 
 let dl id = CAst.make id
@@ -50,16 +53,16 @@ let bin_rel_t id_t =
   CAst.make @@ CProdN ([CLocalAssum ([(dl Names.Anonymous);(dl Names.Anonymous)],
 		       Default Decl_kinds.Explicit, mkIdentC id_t)], cprop)
 
-let hole = CAst.make @@ CHole (None, Misctypes.IntroAnonymous, None)
+let hole = CAst.make @@ CHole (None, Namegen.IntroAnonymous, None)
 
 (* à la v8.2... *)
-let declare_definition
+let declare_definition ~ontop ?hook
     id (loc, boxed_flag, def_obj_kind)
     binder_list red_expr_opt constr_expr
-    constr_expr_opt decl_hook =
-  ComDefinition.do_definition ~program_mode:false
-  id (loc, false, def_obj_kind) binder_list red_expr_opt constr_expr
-  constr_expr_opt decl_hook
+    constr_expr_opt =
+  ComDefinition.do_definition ~ontop ~program_mode:false
+  id (loc, false, def_obj_kind) None binder_list red_expr_opt constr_expr
+  constr_expr_opt ?hook
 
 (* building the equality predicate *)
 let equiv_ref =
@@ -109,7 +112,7 @@ let make_eq_mutual ind mind body =
       (Array.to_list body.Declarations.mind_consnames)
       (Array.to_list body.Declarations.mind_consnrealdecls)
   in
-    [((dl id_eq, None), [], Some (bin_rel_t id_t) , lconstr), []]
+    [(dl id_eq, [], Some (bin_rel_t id_t) , lconstr), []]
 
 (* building the ordering predicate *)
 let lt_StrictOrder_ref =
@@ -186,7 +189,7 @@ let make_lt_mutual ind mind body =
   let names = Array.to_list body.Declarations.mind_consnames in
   let decls = Array.to_list body.Declarations.mind_consnrealdecls in
   let lconstr = lt_constr id_lt names decls in
-    [((dl id_lt, None), [], Some (bin_rel_t id_t) , lconstr), []]
+    [(dl id_lt, [], Some (bin_rel_t id_t) , lconstr), []]
 
 (* building the comparison function *)
 let id_Eq = Names.Id.of_string "Eq"
@@ -231,7 +234,7 @@ let lexi_eqn_constr r carity : branch_expr =
 	  let brlt = dl ([[patc ref_Lt []]], mkIdentC id_Lt) in
 	  let breq = dl ([[patc ref_Eq []]], branch xs ys) in
 	  let brgt = dl ([[patc ref_Gt []]], mkIdentC id_Gt) in
-	  CAst.make @@ CCases (RegularStyle, None, item,
+	  CAst.make @@ CCases (Constr.RegularStyle, None, item,
 			       [brlt; breq; brgt])
       | _, _ -> failwith "Lists should have the same size"
   in
@@ -265,7 +268,7 @@ let make_cmp_def ind mind body =
   let items = [mkIdentC x, None, None;
 	       mkIdentC y, None, None] in
   let branches = branches_constr id_cmp names decls in
-  let body = CAst.make @@ CCases (RegularStyle, None, items, branches) in
+  let body = CAst.make @@ CCases (Constr.RegularStyle, None, items, branches) in
   let def =
     CLambdaN ([CLocalAssum ([dl (Names.Name x); dl (Names.Name y)],
 		Default Decl_kinds.Explicit,
@@ -277,8 +280,8 @@ let make_cmp_def ind mind body =
 let load_tactic s =
   Tacinterp.interp
     (Tacexpr.TacArg
-       (None, Tacexpr.Reference
-          (Libnames.qualid_of_ident (Names.Id.of_string s))))
+       (CAst.make (Tacexpr.Reference
+          (Libnames.qualid_of_ident (Names.Id.of_string s)))))
 
 let load_tactic_args s lids =
   let args =
@@ -286,14 +289,12 @@ let load_tactic_args s lids =
   in
   Tacinterp.interp
     (Tacexpr.TacArg
-       (Loc.tag @@ Tacexpr.TacCall (Loc.tag
+       (CAst.make @@ Tacexpr.TacCall (CAst.make @@
        (Libnames.qualid_of_ident (Names.Id.of_string s),
         args))))
 
 let property_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Property)
 let lemma_kind = (Decl_kinds.Global, false, Decl_kinds.Proof Decl_kinds.Lemma)
-
-let dummy_hook = Lemmas.mk_hook (fun _ _ -> ())
 
 let get_context ty =
   let env = Global.env () in
@@ -301,43 +302,45 @@ let get_context ty =
   let sigma, _ty = Typing.type_of env sigma ty in
    sigma
 
+let build_proof na goal tac =
+  let pstate = Lemmas.start_proof na
+    property_kind (get_context goal) ~ontop:None goal in
+  let pstate, _ = Pfedit.by tac pstate in
+  ignore (Lemmas.save_proof_proved ~idopt:None ?proof:None ~opaque:Proof_global.Transparent ~pstate)
+
+let mkArrow t u = mkArrow t Sorts.Relevant u
+
 let prove_refl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
-  let ceq = EConstr.of_constr (Universes.constr_of_global
+  let ceq = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let goal =
-    mkNamedProd x indconstr
+    mkNamedProd (Context.make_annot x Sorts.Relevant) indconstr
 		(mkApp (ceq, [| mkVar x; mkVar x |])) in
   let refltactic =
     load_tactic "rinductive_refl"
   in
-    Lemmas.start_proof (add_suffix id_t "_eq_refl")
-      property_kind (get_context goal) goal dummy_hook;
-    ignore(Pfedit.by refltactic);
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+    build_proof (add_suffix id_t "_eq_refl") goal refltactic
 
 let prove_sym indconstr mind body =
   let id_t = body.Declarations.mind_typename in
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let ceq = EConstr.of_constr (Universes.constr_of_global
+  let ceq = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let goal =
-    mkNamedProd x indconstr
-      (mkNamedProd y indconstr
+    mkNamedProd (make_annot x Sorts.Relevant) indconstr
+      (mkNamedProd (make_annot y Sorts.Relevant) indconstr
 	 (mkArrow
 	    (mkApp (ceq, [| mkVar x; mkVar y |]))
 	    (mkApp (ceq, [| mkVar y; mkVar x |])))) in
   let symtactic =
     load_tactic "rinductive_sym"
   in
-    Lemmas.start_proof (add_suffix id_t "_eq_sym")
-      property_kind (get_context goal) goal dummy_hook;
-    ignore(Pfedit.by symtactic);
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+    build_proof (add_suffix id_t "_eq_sym") goal symtactic
 
 let prove_trans indconstr mind body =
   let id_t = body.Declarations.mind_typename in
@@ -345,12 +348,12 @@ let prove_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let ceq = EConstr.of_constr (Universes.constr_of_global
+  let ceq = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let goal =
-    mkNamedProd x indconstr
-      (mkNamedProd y indconstr
-	 (mkNamedProd z indconstr
+    mkNamedProd (make_annot x Sorts.Relevant) indconstr
+      (mkNamedProd (make_annot y Sorts.Relevant) indconstr
+	 (mkNamedProd (make_annot z Sorts.Relevant) indconstr
 	    (mkArrow
 	       (mkApp (ceq, [| mkVar x; mkVar y |]))
 	       (mkArrow
@@ -360,10 +363,7 @@ let prove_trans indconstr mind body =
   let transtactic =
     load_tactic "rinductive_trans"
   in
-    Lemmas.start_proof (add_suffix id_t "_eq_trans")
-      property_kind (get_context goal) goal dummy_hook;
-    ignore(Pfedit.by transtactic);
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+    build_proof (add_suffix id_t "_eq_trans") goal transtactic
 
 let prove_Equivalence indconstr mind body =
   prove_refl indconstr mind body;
@@ -378,9 +378,9 @@ let prove_Equivalence indconstr mind body =
 	   mkIdentC (add_suffix id_t "_eq_sym"), None;
 	   mkIdentC (add_suffix id_t "_eq_trans"), None])
   in
-    declare_definition id_equiv
+    declare_definition ~ontop:None id_equiv
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      None [] None equiv None dummy_hook (* ; *)
+      [] None equiv None (* ; *)
 (*     Classes.declare_instance false (dl id_equiv) *)
 
 
@@ -392,17 +392,17 @@ let prove_lt_trans indconstr mind body =
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
   let z = Nameops.make_ident "z" None in
-  let clt = EConstr.of_constr (Universes.constr_of_global
+  let clt = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_lt))) in
-  let ceq = EConstr.of_constr (Universes.constr_of_global
+  let ceq = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_eq))) in
   let prove_eq_lt_and_gt () =
     let id_eq_sym = add_suffix id_t "_eq_sym" in
     let id_eq_trans = add_suffix id_t "_eq_trans" in
     let lemma_eq_lt =
-      mkNamedProd x indconstr
-	(mkNamedProd y indconstr
-	   (mkNamedProd z indconstr
+      mkNamedProd (make_annot x Sorts.Relevant) indconstr
+	(mkNamedProd (make_annot y Sorts.Relevant) indconstr
+	   (mkNamedProd (make_annot z Sorts.Relevant) indconstr
 	      (mkArrow
 		 (mkApp (ceq, [| mkVar x; mkVar y |]))
 		 (mkArrow
@@ -413,9 +413,9 @@ let prove_lt_trans indconstr mind body =
       load_tactic_args "rinductive_eq_lt" [id_eq_sym; id_eq_trans]
     in
     let lemma_eq_gt =
-      mkNamedProd x indconstr
-	(mkNamedProd y indconstr
-	   (mkNamedProd z indconstr
+      mkNamedProd (make_annot x Sorts.Relevant) indconstr
+	(mkNamedProd (make_annot y Sorts.Relevant) indconstr
+	   (mkNamedProd (make_annot z Sorts.Relevant) indconstr
 	      (mkArrow
 		 (mkApp (ceq, [| mkVar x; mkVar y |]))
 		 (mkArrow
@@ -425,19 +425,13 @@ let prove_lt_trans indconstr mind body =
     let solve_eq_gt =
       load_tactic_args "rinductive_eq_gt" [id_eq_trans]
     in
-      Lemmas.start_proof (add_suffix id_t "_eq_lt")
-	lemma_kind (get_context lemma_eq_lt) lemma_eq_lt dummy_hook;
-      ignore(Pfedit.by solve_eq_lt);
-      Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None));
-      Lemmas.start_proof (add_suffix id_t "_eq_gt")
-	lemma_kind (get_context lemma_eq_gt) lemma_eq_gt dummy_hook;
-      ignore(Pfedit.by solve_eq_gt);
-      Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+      build_proof (add_suffix id_t "_eq_lt") lemma_eq_lt solve_eq_lt;
+      build_proof (add_suffix id_t "_eq_gt") lemma_eq_gt solve_eq_gt
   in
   let goal =
-    mkNamedProd x indconstr
-      (mkNamedProd y indconstr
-	 (mkNamedProd z indconstr
+    mkNamedProd (make_annot x Sorts.Relevant) indconstr
+      (mkNamedProd (make_annot y Sorts.Relevant) indconstr
+	 (mkNamedProd (make_annot z Sorts.Relevant) indconstr
 	    (mkArrow
 	       (mkApp (clt, [| mkVar x; mkVar y |]))
 	       (mkArrow
@@ -450,10 +444,7 @@ let prove_lt_trans indconstr mind body =
        add_suffix id_t "_eq_gt"; add_suffix id_t "_eq_lt"]
   in
   prove_eq_lt_and_gt ();
-  Lemmas.start_proof (add_suffix id_t "_lt_trans")
-    property_kind (get_context goal) goal dummy_hook;
-  ignore(Pfedit.by transtactic);
-  Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+  build_proof (add_suffix id_t "_lt_trans") goal transtactic
 
 let prove_lt_irrefl indconstr mind body =
   let id_t = body.Declarations.mind_typename in
@@ -461,15 +452,15 @@ let prove_lt_irrefl indconstr mind body =
   let id_eq = add_suffix id_t "_eq" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = EConstr.of_constr (Universes.constr_of_global
+  let clt = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_lt))) in
-  let ceq = EConstr.of_constr (Universes.constr_of_global
+  let ceq = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_eq))) in
-  let cfalse = EConstr.of_constr (Universes.constr_of_global
+  let cfalse = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident (Names.Id.of_string "False")))) in
   let goal =
-    mkNamedProd x indconstr
-      (mkNamedProd y indconstr
+    mkNamedProd (make_annot x Sorts.Relevant) indconstr
+      (mkNamedProd (make_annot y Sorts.Relevant) indconstr
 	 (mkArrow
 	    (mkApp (clt, [| mkVar x; mkVar y |]))
 	    (mkArrow
@@ -479,10 +470,7 @@ let prove_lt_irrefl indconstr mind body =
   let irrefltactic =
     load_tactic "rinductive_irrefl"
   in
-    Lemmas.start_proof (add_suffix id_t "_lt_irrefl")
-      property_kind (get_context goal) goal dummy_hook;
-    ignore(Pfedit.by irrefltactic);
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+    build_proof (add_suffix id_t "_lt_irrefl") goal irrefltactic
 
 let build_strictorder_ref =
   Libnames.qualid_of_string "Containers.OrderedType.Build_StrictOrder"
@@ -498,9 +486,9 @@ let prove_StrictOrder indconstr mind body =
 	   mkIdentC (add_suffix id_t "_lt_trans"), None;
 	   mkIdentC (add_suffix id_t "_lt_irrefl"), None])
   in
-    declare_definition id_strict
+    declare_definition ~ontop:None id_strict
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      None [] None strict None dummy_hook
+      [] None strict None
 
 
 (* proving the [OrderedType] instance *)
@@ -511,28 +499,25 @@ let prove_t_compare_spec indconstr mind body =
   let id_cmp = add_suffix id_t "_cmp" in
   let x = Nameops.make_ident "x" None in
   let y = Nameops.make_ident "y" None in
-  let clt = EConstr.of_constr (Universes.constr_of_global
+  let clt = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_lt))) in
-  let ceq = EConstr.of_constr (Universes.constr_of_global
+  let ceq = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_eq))) in
-  let ccmp = EConstr.of_constr (Universes.constr_of_global
+  let ccmp = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id_cmp))) in
-  let ccomp_spec = EConstr.of_constr (Universes.constr_of_global
+  let ccomp_spec = EConstr.of_constr (UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident
 		       (Names.Id.of_string "compare_spec")))) in
   let goal =
-    mkNamedProd x indconstr
-      (mkNamedProd y indconstr
+    mkNamedProd (make_annot x Sorts.Relevant) indconstr
+      (mkNamedProd (make_annot y Sorts.Relevant) indconstr
 	 (mkApp (ccomp_spec,
 		 [| indconstr; ceq; clt; mkVar x; mkVar y;
 		    mkApp (ccmp, [| mkVar x; mkVar y |]) |]))) in
   let spectactic =
     load_tactic_args "rsolve_compare_spec" [add_suffix id_t "_eq_sym"]
   in
-  Lemmas.start_proof (add_suffix id_t "_compare_spec")
-    property_kind (get_context goal) goal dummy_hook;
-  ignore(Pfedit.by spectactic);
-  Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None))
+    build_proof (add_suffix id_t "_compare_spec") goal spectactic
 
 let build_ot_ref =
   Libnames.qualid_of_string "Containers.OrderedType.Build_OrderedType"
@@ -551,18 +536,18 @@ let prove_OrderedType indconstr mind body =
 	   hole, None;
 	   mkIdentC (add_suffix id_t "_compare_spec"), None])
   in
-    declare_definition id_ot
+    declare_definition ~ontop:None id_ot
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      None [] None ot None
-      (Lemmas.mk_hook (fun loc gr ->
+      ~hook:(Lemmas.mk_hook (fun _ _ loc gr ->
 		       Typeclasses.add_instance
 			 (Typeclasses.new_instance tc Hints.empty_hint_info
 						       (loc<>Decl_kinds.Local)
 						       gr)))
+      [] None ot None
 
 let generate_simple_ot gref =
   let gindref = Nametab.global gref in
-  let indconstr = Universes.constr_of_global gindref in
+  let indconstr = UnivGen.constr_of_monomorphic_global gindref in
   let indeconstr = EConstr.of_constr indconstr in
   (* retrieve the inductive type *)
   let (ind, ctx) =
@@ -572,16 +557,16 @@ let generate_simple_ot gref =
   (* define the equality predicate *)
   let mutual_eq = make_eq_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  ComInductive.do_mutual_inductive mutual_eq false false false ComInductive.NonUniformParameters Declarations.Finite;
+  ComInductive.do_mutual_inductive ~template:None None mutual_eq false false false ~uniform:ComInductive.NonUniformParameters Declarations.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = make_lt_mutual ind mind ibody in
   (* fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  ComInductive.do_mutual_inductive mutual_lt false false false ComInductive.NonUniformParameters Declarations.Finite;
+  ComInductive.do_mutual_inductive ~template:None None mutual_lt false false false ~uniform:ComInductive.NonUniformParameters Declarations.Finite;
   (* declare the comparison function *)
   let id_cmp, ttt = make_cmp_def ind mind ibody in
-    declare_definition id_cmp
+    declare_definition ~ontop:None id_cmp
       (Decl_kinds.Global, false, Decl_kinds.Definition)
-      None [] None ttt None dummy_hook;
+      [] None ttt None;
   (* prove the Equivalence instance *)
   prove_Equivalence indeconstr mind ibody;
   (* prove the StrictOrder instance *)
@@ -649,7 +634,7 @@ let rmake_eq_mutual ind mask mind body =
       (Array.to_list body.mind_consnrealdecls)
       mask
   in
-    [((dl id_eq, None), [], Some (bin_rel_t id_t) , lconstr), []]
+    [(dl id_eq, [], Some (bin_rel_t id_t) , lconstr), []]
 
 let rlexi_constr eqid ltid cid carity cmask =
   let xbar = app_expl_i [] "x" carity in
@@ -714,7 +699,7 @@ let rmake_lt_mutual ind mask mind body =
   let names = Array.to_list body.Declarations.mind_consnames in
   let decls = Array.to_list body.Declarations.mind_consnrealdecls in
   let lconstr = rlt_constr id_eq id_lt names decls mask in
-    [((dl id_lt, None), [], Some (bin_rel_t id_t) , lconstr), []]
+    [(dl id_lt, [], Some (bin_rel_t id_t) , lconstr), []]
 
 let mk_cmp_if cmpid x y mask =
   if mask then
@@ -732,7 +717,7 @@ let rlexi_eqn_constr r cmpid carity cmask =
 	 let brlt = dl ([[patc ref_Lt []]], mkIdentC id_Lt) in
 	 let breq = dl ([[patc ref_Eq []]], branch xs ys masks) in
 	 let brgt = dl ([[patc ref_Gt []]], mkIdentC id_Gt) in
-	 CAst.make @@ CCases (RegularStyle, None, item,
+	 CAst.make @@ CCases (Constr.RegularStyle, None, item,
 			      [brlt; breq; brgt])
       | _, _, _ -> failwith "Lists should have the same size"
   in
@@ -769,8 +754,8 @@ let rmake_cmp_def ind mask mind body =
   let items = [mkIdentC x, None, None;
 	       mkIdentC y, None, None] in
   let branches = rbranches_constr id_cmp names decls mask in
-  let body =  CAst.make @@ CCases (RegularStyle, None, items, branches) in
-    ((dl id_cmp, None), (None, Constrexpr.CStructRec),
+  let body =  CAst.make @@ CCases (Constr.RegularStyle, None, items, branches) in
+    ((dl id_cmp, None), None,
      [CLocalAssum([dl (Names.Name x); dl (Names.Name y)],
 		    Default Decl_kinds.Explicit, mkIdentC id_t)],
      ccomparison,
@@ -790,7 +775,7 @@ let make_mask body =
 
 let generate_rec_ot gref =
   let gindref = Nametab.global gref in
-  let indconstr = Universes.constr_of_global gindref in
+  let indconstr = UnivGen.constr_of_monomorphic_global gindref in
   let indeconstr = EConstr.of_constr indconstr in
   (* retrieve the inductive type *)
   let env = Global.env () in
@@ -813,14 +798,14 @@ let generate_rec_ot gref =
   (* define the equality predicate *)
   let mutual_eq = rmake_eq_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_eq; *)
-  ComInductive.do_mutual_inductive mutual_eq false false false ComInductive.NonUniformParameters Declarations.Finite;
+  ComInductive.do_mutual_inductive ~template:None None mutual_eq false false false ~uniform:ComInductive.NonUniformParameters Declarations.Finite;
   (* define the strict ordering predicate *)
   let mutual_lt = rmake_lt_mutual ind mask mind ibody in
   (*     fprintf std_formatter "%a" print_inductive_def mutual_lt; *)
-  ComInductive.do_mutual_inductive mutual_lt false false false ComInductive.NonUniformParameters Declarations.Finite;
+  ComInductive.do_mutual_inductive ~template:None None mutual_lt false false false ~uniform:ComInductive.NonUniformParameters Declarations.Finite;
   (* declare the comparison function *)
   let fexpr = rmake_cmp_def ind mask mind ibody in
-  ComFixpoint.do_fixpoint Decl_kinds.Global false [(fexpr, [])];
+  ignore (ComFixpoint.do_fixpoint ~ontop:None Decl_kinds.Global false [(fexpr, [])]);
   (* prove the Equivalence instance *)
   prove_Equivalence indeconstr mind ibody;
   (* prove the StrictOrder instance *)
@@ -831,7 +816,7 @@ let generate_rec_ot gref =
 open Declarations
 
 let c_of_id id =
-  Universes.constr_of_global
+  UnivGen.constr_of_monomorphic_global
     (Nametab.global (Libnames.qualid_of_ident id))
 
 exception FoundEqual of int
@@ -897,7 +882,7 @@ let mmake_eq_mutual ind (masks : int list list array) mind =
   in
     Array.to_list
       (Array.mapi (fun i lconstr ->
-		     ((dl ids_eq.(i), None), [], Some (bin_rel_t ids.(i)), lconstr),
+		     (dl ids_eq.(i), [], Some (bin_rel_t ids.(i)), lconstr),
 		     [])
 	 lconstrs)
 
@@ -906,10 +891,8 @@ let do_proofs goals tac =
   let evd = Evd.from_env env in
   let do_proof (name,goal) =
     let evd, egoal = Constrintern.interp_constr_evars env evd (CAst.make goal) in
-    Lemmas.start_proof name property_kind evd egoal dummy_hook;
-    ignore(Pfedit.by tac);
-    Lemmas.save_proof (Vernacexpr.Proved(Vernacexpr.Transparent,None)) in
-  ignore(List.map do_proof goals)
+    build_proof name egoal tac in
+  List.iter do_proof goals
 
 
 
@@ -1005,9 +988,9 @@ let mprove_Equivalence k mind =
   let ids = Array.map (fun body -> body.mind_typename) mind.mind_packets in
   let ids_eq = Array.map (fun id_t -> add_suffix id_t "_eq") ids in
   let ids_equiv = Array.map (fun id -> add_suffix id "_Equivalence") ids_eq in
-    mprove_refl k ids ids_eq mind;
-    mprove_sym k ids ids_eq mind;
-    mprove_trans k ids ids_eq mind;
+  mprove_refl k ids ids_eq mind;
+  mprove_sym k ids ids_eq mind;
+  mprove_trans k ids ids_eq mind;
   let equiv i =
     CAst.make @@ CAppExpl ((mkARefC (Names.Id.of_string "Build_Equivalence")),
 			   [hole; hole;
@@ -1016,9 +999,9 @@ let mprove_Equivalence k mind =
 			    mkIdentC (add_suffix ids.(i) "_eq_trans")])
   in
     Array.iteri (fun i id_equiv ->
-		   declare_definition id_equiv
+		   declare_definition ~ontop:None id_equiv
 		     (Decl_kinds.Global, false, Decl_kinds.Definition)
-		     None [] None (equiv i) None dummy_hook)
+		     [] None (equiv i) None)
       ids_equiv
 
 let mlexi_constr ids_eq ids_lt ltid cid carity cmask =
@@ -1090,7 +1073,7 @@ let mmake_lt_mutual ind masks mind =
   in
   Array.to_list
     (Array.mapi (fun i lconstr ->
-		   ((dl ids_lt.(i), None), [], Some (bin_rel_t ids.(i)), lconstr),
+		   (dl ids_lt.(i), [], Some (bin_rel_t ids.(i)), lconstr),
 		   [])
        lconstrs)
 
@@ -1101,17 +1084,17 @@ open Stdarg
 
 let apply_tactic s tacs =
   Tacexpr.TacArg
-    (Loc.tag @@ Tacexpr.TacCall (Loc.tag
+    (CAst.make @@ Tacexpr.TacCall (CAst.make
 				   (Libnames.qualid_of_ident (Names.Id.of_string s),
 				    List.map (fun t -> Tacexpr.Tacexp t) tacs)))
 
 let seq_eapply lids : raw_tactic_expr =
   let b = Nameops.make_ident "__B" None in
   let apply id =
-    TacAtom (Loc.tag @@
+    TacAtom (CAst.make @@
 	     TacApply (true, false,
 		       [(None, (mkIdentC id,
-			 Misctypes.ImplicitBindings [mkIdentC b]))],
+			 Tactypes.ImplicitBindings [mkIdentC b]))],
 		       None))
   in
     TacFun ([Names.Name b], TacFirst (List.map apply lids))
@@ -1120,15 +1103,15 @@ let seq_eapply_sym lids lsyms : raw_tactic_expr =
   let b = Nameops.make_ident "__B" None in
   let apply_with_sym id idsym =
     TacThens(
-      TacAtom (Loc.tag @@
+      TacAtom (CAst.make @@
 	       TacApply (true, false,
 			 [(None, (mkIdentC id,
-			   Misctypes.ImplicitBindings [mkIdentC b]))],
+			   Tactypes.ImplicitBindings [mkIdentC b]))],
 			 None)),
       [
-	TacAtom (Loc.tag @@
+	TacAtom (CAst.make @@
 		 TacApply (true, false,
-			   [(None, (mkIdentC idsym, Misctypes.NoBindings))],
+			   [(None, (mkIdentC idsym, Tactypes.NoBindings))],
 			   None));
 	TacId []
       ])
@@ -1161,7 +1144,7 @@ let mprove_lt_trans k ids ids_eq ids_lt mind =
 	   (mkIdentC (add_suffix id_eq "_sym"))::
 	     (mkIdentC (add_suffix id_eq "_trans"))::acc
 	) [] ids_eq in
-	       TacML (Loc.tag @@ (eauto,
+	       TacML (CAst.make @@ (eauto,
 			  [TacGeneric (in_gen (rawwit (wit_opt Stdarg.wit_int_or_var)) None);
 			   TacGeneric (in_gen (rawwit (wit_opt Stdarg.wit_int_or_var)) None);
 			   TacGeneric (in_gen (rawwit G_auto.wit_auto_using) lems);
@@ -1316,9 +1299,9 @@ let mprove_StrictOrder k mind =
 	   mkIdentC (add_suffix ids_lt.(i) "_irrefl")])
   in
   Array.iteri (fun i id_order ->
-		 declare_definition id_order
+		 declare_definition ~ontop:None id_order
 		   (Decl_kinds.Global, false, Decl_kinds.Definition)
-		   None [] None (CAst.make (strict i)) None dummy_hook)
+		   [] None (CAst.make (strict i)) None)
     ids_order
 
 let mmk_cmp_if ids_cmp x y mask =
@@ -1337,7 +1320,7 @@ let mlexi_eqn_constr r ids_cmp carity cmask : branch_expr =
 	  let brlt = dl ([[patc ref_Lt []]], mkIdentC id_Lt) in
 	  let breq = dl ([[patc ref_Eq []]], branch xs ys masks) in
 	  let brgt = dl ([[patc ref_Gt []]], mkIdentC id_Gt) in
-	    CAst.make @@ CCases (RegularStyle, None, item,
+	    CAst.make @@ CCases (Constr.RegularStyle, None, item,
 				 [brlt; breq; brgt])
       | _, _, _ -> failwith "Lists should have the same size"
   in
@@ -1372,10 +1355,10 @@ let mmake_cmp_def k ind masks mind =
     let items = [mkIdentC x, None, None;
 		 mkIdentC y, None, None] in
     let branches = mbranches_constr ids_cmp names decls masks.(i) in
-    CAst.make @@ CCases (RegularStyle, None, items, branches)
+    CAst.make @@ CCases (Constr.RegularStyle, None, items, branches)
   in
   let make_block i body =
-    ((dl ids_cmp.(i), None), (None, Constrexpr.CStructRec),
+    ((dl ids_cmp.(i), None), None,
      [CLocalAssum([dl (Names.Name x); dl (Names.Name y)],
 		    Default Decl_kinds.Explicit, mkIdentC ids.(i))],
      ccomparison,
@@ -1389,16 +1372,16 @@ let mmake_cmp_def k ind masks mind =
 		      mkIdentC ids.(0))],
 		    make_body 0 mind.mind_packets.(0))
 	in
-	  declare_definition ids_cmp.(0)
+	  declare_definition ~ontop:None ids_cmp.(0)
 	    (Decl_kinds.Global, false, Decl_kinds.Definition)
-	    None [] None (CAst.make def) None dummy_hook
+	    [] None (CAst.make def) None
     | Recursive | Mutual ->
 	let defs =
 	  Array.to_list (Array.mapi
 			   (fun i body -> make_block i body, [])
 			   mind.mind_packets)
 	in
-	ComFixpoint.do_fixpoint Decl_kinds.Global false defs
+	ignore (ComFixpoint.do_fixpoint ~ontop:None Decl_kinds.Global false defs)
 
 let using_sym_tac = ref (None:Tacexpr.ml_tactic_entry option)
 
@@ -1416,7 +1399,7 @@ let using_sym ?loc =
        let tac args _ =
 	 let map v =
 	   let id = Tacinterp.Value.cast (topwit Stdarg.wit_ident) v in
-	   (fun ist sigma -> (sigma, (EConstr.of_constr (Universes.constr_of_global (Constrintern.global_reference id)))))
+	   (fun ist sigma -> (sigma, (EConstr.of_constr (UnivGen.constr_of_monomorphic_global (Constrintern.global_reference id)))))
 	 in
 	 let args = List.map map args in
 	 Auto.h_auto None args (Some [])
@@ -1429,7 +1412,7 @@ let using_sym ?loc =
   fun ids ->
   let map id = TacGeneric (in_gen (rawwit Stdarg.wit_ident) id) in
   let ids = List.map map ids in
-  TacML (Loc.tag ?loc (entry, ids))
+  TacML (CAst.make ?loc (entry, ids))
 
 
 (* proving the [OrderedType] instance *)
@@ -1482,10 +1465,10 @@ let mprove_OrderedType k mind =
     let tc = Typeclasses.class_info (Coqlib.find_reference
 				       "containersplugin"
 				       ["Containers";"OrderedType"] "OrderedType")
-    in declare_definition id_ot
+    in declare_definition ~ontop:None id_ot
 			  (Decl_kinds.Global, false, Decl_kinds.Definition)
-			  None [] None ot None
-			  (Lemmas.mk_hook (fun loc gr ->
+			  [] None ot None
+			  ~hook:(Lemmas.mk_hook (fun _ _ loc gr ->
           Typeclasses.add_instance
             (Typeclasses.new_instance
                tc Hints.empty_hint_info
@@ -1499,7 +1482,7 @@ let generate_mutual_ot gref =
   Coqlib.check_required_library ["Coq";"Classes";"Equivalence"];
   Coqlib.check_required_library ["Containers";"Tactics"];
   let gindref = Nametab.global gref in
-  let indconstr = Universes.constr_of_global gindref in
+  let indconstr = UnivGen.constr_of_monomorphic_global gindref in
   (* retrieve the inductive type *)
   let env = Global.env () in
   let evd = Evd.from_env env in
@@ -1526,12 +1509,12 @@ let generate_mutual_ot gref =
   if_verbose Feedback.msg_notice (str "Inductive kind : " ++ pr_kind kind);
   (* define the equality predicate *)
   let mutual_eq = mmake_eq_mutual ind masks mind in
-  ComInductive.do_mutual_inductive mutual_eq false false false ComInductive.NonUniformParameters Declarations.Finite;
+  ComInductive.do_mutual_inductive ~template:None None mutual_eq false false false ~uniform:ComInductive.NonUniformParameters Declarations.Finite;
   (* prove the Equivalence instance *)
   mprove_Equivalence kind mind;
   (* define the strict ordering predicate *)
   let mutual_lt = mmake_lt_mutual ind masks mind in
-  ComInductive.do_mutual_inductive mutual_lt false false false ComInductive.NonUniformParameters Declarations.Finite;
+  ComInductive.do_mutual_inductive ~template:None None mutual_lt false false false ~uniform:ComInductive.NonUniformParameters Declarations.Finite;
   (* prove the StrictOrder instance *)
   mprove_StrictOrder kind mind;
   (* define the comparison function *)
@@ -1567,39 +1550,38 @@ let print_paths gref =
 	 if_verbose Feedback.msg_notice pptree)
     mind.mind_packets
 
+}
 
 (* Syntax extensions *)
 
-DECLARE PLUGIN "containers_plugin"
-
 (* The 3 next commands are for debug *)
 VERNAC COMMAND EXTEND GenerateSimpleOrderedType CLASSIFIED AS SIDEFF
- ["Generate" "Simple" "OrderedType" global(indref)] ->
-  [ generate_simple_ot indref ]
-    END
+| ["Generate" "Simple" "OrderedType" global(indref)] ->
+  { generate_simple_ot indref }
+END
 
 VERNAC COMMAND EXTEND GenerateRecursiveOrderedType CLASSIFIED AS SIDEFF
- ["Generate" "Recursive" "OrderedType" global(indref)] ->
-  [ generate_rec_ot indref ]
+| ["Generate" "Recursive" "OrderedType" global(indref)] ->
+  { generate_rec_ot indref }
 END
 
 VERNAC COMMAND EXTEND GenerateMutualOrderedType CLASSIFIED AS SIDEFF
- ["Generate" "Mutual" "OrderedType" global(indref)] ->
-  [ generate_mutual_ot indref ]
+| ["Generate" "Mutual" "OrderedType" global(indref)] ->
+  { generate_mutual_ot indref }
 END
 (* *)
 
 VERNAC COMMAND EXTEND GenerateOrderedType CLASSIFIED AS SIDEFF
- ["Generate" "OrderedType" global(indref)] ->
-  [ generate_ot indref ]
+| ["Generate" "OrderedType" global(indref)] ->
+  { generate_ot indref }
 END
 
 VERNAC COMMAND EXTEND GenerateScheme CLASSIFIED AS SIDEFF
- ["Generate" "Scheme" global(indref)] ->
-   [ let _ = generate_scheme indref in () ]
+| ["Generate" "Scheme" global(indref)] ->
+  { let _ = generate_scheme indref in () }
 END
 
 VERNAC COMMAND EXTEND PrintWPaths CLASSIFIED AS QUERY
- ["Print" "Paths" global(indref)] ->
-   [ print_paths (Nametab.global indref) ]
+| ["Print" "Paths" global(indref)] ->
+  { print_paths (Nametab.global indref) }
 END
