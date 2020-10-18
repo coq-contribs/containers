@@ -4,7 +4,7 @@
 CAMLP4OPTIONS = "-loc loc"
 src/printing.ml
 src/printing.mli
-src/generate.ml4
+src/generate.mlg
 src/containers_plugin_mod.ml
 src/containers_plugin.mllib
 
